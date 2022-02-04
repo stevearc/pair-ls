@@ -1,0 +1,74 @@
+name: Test and Build
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+  schedule:
+    - cron: "0 12 * * *"
+jobs:
+  check_date:
+    runs-on: ubuntu-latest
+    name: Check latest commit
+    steps:
+      - uses: actions/checkout@v2
+      - name: print latest_commit
+        run: echo ${{ github.sha }}
+      - continue-on-error: true
+        name: check latest commit is less than a day
+        if: ${{ github.event_name == 'schedule' }}
+        run: test -z $(git rev-list --after="24 hours" @) && echo "IS_NIGHTLY=1" >> $GITHUB_ENV
+  lint-job:
+    runs-on: ubuntu-20.04
+    name: Lint and build Javascript
+    needs: check_date
+    if: ${{ github.event.schedule == null || github.env.IS_NIGHTLY == 1 }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.17"
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+          cache: "yarn"
+      - run: yarn install
+      - run: yarn lint
+      - run: yarn release
+      - name: "Upload build artifacts"
+        if: ${{ github.env.IS_NIGHTLY == 1 }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: js-bundle
+          path: "server/dist/*"
+          retention-days: 1
+  release-nightly:
+    runs-on: ubuntu-20.04
+    name: Nightly release
+    needs: lint-job
+    if: ${{ github.env.IS_NIGHTLY == 1 }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.17"
+      - name: Download a single artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: js-bundle
+      - run: GOOS=linux GOARCH=amd64 go build -o pair-ls-linux64
+      - run: GOOS=darwin GOARCH=amd64 go build -o pair-ls-mac
+      - run: GOOS=windows GOARCH=amd64 go build -o pair-ls.exe
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          files: |
+            pair-ls-*
+            pair-ls.exe
+          name: nightly
+          tag_name: nightly

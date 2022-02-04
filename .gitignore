@@ -13,3 +13,10 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+pair-ls
+
+node_modules/
+dist/
+server/dist/
+
+yarn-error.log

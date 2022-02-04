@@ -1,0 +1,151 @@
+:root {
+  color-scheme: dark light;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+body {
+  color: var(--fg) !important;
+  background-color: var(--bg) !important;
+}
+
+pre {
+  font-size: 0.8rem;
+  line-height: 1.2;
+  tab-size: 2;
+  letter-spacing: 0;
+}
+
+.hljs {
+  position: relative;
+  color: var(--fg);
+  background-color: var(--bg);
+  display: block;
+  padding: 0.5rem;
+  margin: 0;
+}
+
+.hljs-formula,
+.hljs-subst,
+.hljs-name,
+.hljs-selector-tag,
+.hljs-deletion,
+.hljs-bullet,
+.hljs-section,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-selector-attr,
+.hljs-selector-pseudo {
+  color: var(--fg);
+}
+
+.hljs-variable {
+  color: var(--variable);
+}
+
+.hljs-quote,
+.hljs-comment {
+  color: var(--comment);
+  font-style: italic;
+}
+.hljs-keyword {
+  color: var(--keyword);
+}
+
+.hljs-doctag {
+  color: var(--attribute);
+}
+
+.hljs-built_in {
+  color: var(--funcBuiltin);
+}
+
+.hljs-literal {
+  color: var(--constant);
+}
+.hljs-number {
+  color: var(--number);
+}
+
+.hljs-string,
+.hljs-addition,
+.hljs-attribute,
+.hljs-meta .hljs-string {
+  color: var(--string);
+}
+.hljs-regexp {
+  color: var(--stringRegex);
+}
+
+.hljs-meta,
+.hljs-attr {
+  color: var(--preproc);
+}
+
+.hljs-type {
+  color: var(--type);
+}
+.hljs-params {
+  color: var(--parameter);
+}
+.hljs-template-variable {
+  color: var(--stringEscape);
+}
+
+.hljs-variable.language_ {
+  color: var(--variableBuiltin);
+}
+
+.hljs-symbol {
+  color: var(--label);
+}
+
+.hljs-title.function_ {
+  color: var(--function);
+}
+
+.hljs-title,
+.hljs-variable,
+.hljs-title.class_ {
+  color: var(--fg);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+.hljs-link {
+  text-decoration: underline;
+}
+
+*::-webkit-scrollbar {
+  width: 0.4rem;
+}
+*::-webkit-scrollbar-track {
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  outline: 1px solid slategrey;
+  border-radius: 4px;
+}
