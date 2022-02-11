@@ -2,6 +2,9 @@
 
 pair-ls is a lightweight, editor-agnostic tool for remote pair-programming.
 
+:warning: pair-ls is currently in **Alpha** status. Expect breaking API changes.
+Backwards compatibility will be respected _after_ the first release.
+
 - [Installation](#installation)
 - [Setup](#setup)
 - [Sharing](#sharing)
