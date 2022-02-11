@@ -12,19 +12,22 @@ jobs:
   check_date:
     runs-on: ubuntu-latest
     name: Check latest commit
+    outputs:
+      build_type: ${{ steps.git_check.outputs.build_type }}
     steps:
       - uses: actions/checkout@v2
       - name: print latest_commit
         run: echo ${{ github.sha }}
-      - continue-on-error: true
+      - id: git_check
+        continue-on-error: true
         name: check latest commit is less than a day
         if: ${{ github.event_name == 'schedule' }}
-        run: test -z $(git rev-list --after="24 hours" @) && echo "IS_NIGHTLY=1" >> $GITHUB_ENV
+        run: test -n "$(git rev-list --after="24 hours" @)" && echo "::set-output name=build_type::nightly"
   lint-job:
     runs-on: ubuntu-20.04
     name: Lint and build Javascript
     needs: check_date
-    if: ${{ github.event.schedule == null || github.env.IS_NIGHTLY == 1 }}
+    if: ${{ github.event.schedule == null || needs.check_date.outputs.build_type == 'nightly' }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
@@ -39,7 +42,7 @@ jobs:
       - run: yarn lint
       - run: yarn release
       - name: "Upload build artifacts"
-        if: ${{ github.env.IS_NIGHTLY == 1 }}
+        if: ${{ needs.check_date.outputs.build_type == 'nightly' }}
         uses: actions/upload-artifact@v2
         with:
           name: js-bundle
@@ -48,8 +51,8 @@ jobs:
   release-nightly:
     runs-on: ubuntu-20.04
     name: Nightly release
-    needs: lint-job
-    if: ${{ github.env.IS_NIGHTLY == 1 }}
+    needs: [check_date, lint-job]
+    if: ${{ needs.check_date.outputs.build_type == 'nightly' }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
@@ -60,6 +63,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: js-bundle
+          path: server/dist
       - run: GOOS=linux GOARCH=amd64 go build -o pair-ls-linux64
       - run: GOOS=darwin GOARCH=amd64 go build -o pair-ls-mac
       - run: GOOS=windows GOARCH=amd64 go build -o pair-ls.exe
