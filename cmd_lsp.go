@@ -37,16 +37,21 @@ func (cmd *lspCommand) Run(args []string) {
 
 	state := state.NewState(log.New(f, "[State]", log.Ldate|log.Ltime|log.Lshortfile))
 
-	conf := server.ServerConfig{
-		Password: cmd.config.WebPassword,
-		KeyFile:  cmd.config.KeyFile,
-		CertFile: cmd.config.CertFile,
-	}
 	if cmd.config.WebPort > 0 {
+		conf := server.ServerConfig{
+			Password: cmd.config.WebPassword,
+			KeyFile:  cmd.config.WebKeyFile,
+			CertFile: cmd.config.WebCertFile,
+		}
 		server := server.NewServer(state, log.New(f, "[Webserver]", log.Ldate|log.Ltime|log.Lshortfile), conf)
 		go server.Serve(cmd.config.WebHostname, cmd.config.WebPort)
 	}
 
+	conf := server.ServerConfig{
+		Password: "",
+		KeyFile:  cmd.config.RelayKeyFile,
+		CertFile: cmd.config.RelayCertFile,
+	}
 	lspLogger := log.New(f, "[LSP server]", log.Ldate|log.Ltime|log.Lshortfile)
 	handler := lsp_handler.NewHandler(state, lspLogger, &conf, cmd.config.ForwardHost)
 

@@ -88,25 +88,31 @@ sniffed.
 ### Encryption
 
 You can provide a x509 certificate and private key file to enable TLS (https)
-support for the webserver. These can be passed in with the `certFile` and
-`keyFile` arguments, or they can be put in the [config file](#configuration).
+support for the webserver. These can be passed in with the `-web-cert` and
+`-web-key` arguments, or they can be put in the [config file](#configuration).
+An easy and free way to get certificates is using [Let's
+Encrypt](https://letsencrypt.org/).
 
-There is an easy helper command `pair-ls cert` that will generate a self-signed
-certificate for you. Since it's self-signed, your browser will give you a big
-"Your connection is not private" warning message that you will have to click
-through.
+If you are using a relay server, both the forwarding client and the relay server
+need to have the same pair of cert and key files. They should be passed in with
+`-relay-cert` and `-relay-key`, or be put in the config file. There is an easy helper command `pair-ls cert` that will generate a self-signed certificate for you that will work for this purpose.
 
-These same certificates are used to secure the connection between the local
-client and a relay server. Copy the certs files to the remote server and set up
-the configuration to look like this:
+You can also use the `pair-ls cert` certs for your webserver, but since it's
+self-signed your browser will give you a big "Your connection is not private"
+warning message that you will have to click through (and if you don't manually
+verify the certificate your browser shows you, you could be vulnerable to a [MITM
+attack](https://en.wikipedia.org/wiki/Man-in-the-middle_attack)).
+
+A full configuration for a local forwarding server and a remote relay server
+that is also running the webserver looks like this:
 
 Local server (`pair-ls lsp`):
 
 ```json
 {
   "forwardHost": "remote.server:8888",
-  "keyFile": "/path/to/server.key.pem",
-  "certFile": "/path/to/localhost.pem"
+  "relayKeyFile": "/path/to/relay.key.pem",
+  "relayCertFile": "/path/to/relay.pem"
 }
 ```
 
@@ -115,9 +121,11 @@ Relay server (`pair-ls relay`):
 ```json
 {
   "relayPort": 8888,
+  "relayKeyFile": "/path/to/relay.key.pem",
+  "relayCertFile": "/path/to/relay.pem",
   "webPort": 80,
-  "keyFile": "/path/to/server.key.pem",
-  "certFile": "/path/to/localhost.pem",
+  "webKeyFile": "/path/to/server.key.pem",
+  "webCertFile": "/path/to/server.pem",
   "webPassword": "asdfasdf"
 }
 ```
@@ -131,14 +139,16 @@ values can be specified on the command line instead, if you prefer (run
 | Key             | Description                                                                               |
 | --------------- | ----------------------------------------------------------------------------------------- |
 | `logFile`       | Logs will be written here (default `$XDG_CACHE_HOME/pair-ls.log`)                         |
-| `keyFile`       | Private key file for encrypted connections                                                |
-| `certFile`      | Certificate file for encrypted connections                                                |
+| `webKeyFile`    | Private key file for webserver TLS                                                        |
+| `webCertFile`   | Certificate file for webserver TLS                                                        |
 | `webHostname`   | Webserver binds to this hostname                                                          |
 | `webPassword`   | Password to restrict access to webpage                                                    |
 | `forwardHost`   | Address of the relay server                                                               |
 | `relayHostname` | Relay server binds to this hostname                                                       |
 | `relayPort`     | Relay server listens on this port                                                         |
 | `relayPersist`  | Relay server retains file data even after forwarding clients disconnect (default `false`) |
+| `relayKeyFile`  | Private key file to encrypt connection to relay server                                    |
+| `relayCertFile` | Certificate file to encrypt connection to relay server                                    |
 
 ## Alternatives
 

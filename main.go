@@ -35,8 +35,10 @@ func main() {
 
 	flag.StringVar(&config.LogFile, "logfile", config.LogFile, "Logs will be written here")
 	flag.IntVar(&config.LogLevel, "loglevel", config.LogLevel, "Log detail")
-	flag.StringVar(&config.KeyFile, "key", config.KeyFile, "Path to the TLS key file")
-	flag.StringVar(&config.CertFile, "cert", config.CertFile, "Path to the TLS cert file")
+	flag.StringVar(&config.WebKeyFile, "web-key", config.WebKeyFile, "Path to the TLS key file for the webserver")
+	flag.StringVar(&config.WebCertFile, "web-cert", config.WebCertFile, "Path to the TLS cert file for the webserver")
+	flag.StringVar(&config.RelayKeyFile, "relay-key", config.RelayKeyFile, "Path to the TLS key file for the relay server")
+	flag.StringVar(&config.RelayCertFile, "relay-cert", config.RelayCertFile, "Path to the TLS cert file for the relay server")
 	command.On("lsp", "Run the LSP server", NewLSPCmd(config), []string{})
 	command.On("relay", "Run a relay server", NewRelayCmd(config), []string{})
 	command.On("cert", "Generate certificates for web and relay server", NewCertCmd(config), []string{})
@@ -69,8 +71,8 @@ func readConfig(filename string) (*PairConfig, error) {
 type PairConfig struct {
 	LogFile       string `json:"logFile"`
 	LogLevel      int    `json:"logLevel"`
-	KeyFile       string `json:"keyFile"`
-	CertFile      string `json:"certFile"`
+	WebKeyFile    string `json:"webKeyFile"`
+	WebCertFile   string `json:"webCertFile"`
 	WebHostname   string `json:"webHostname"`
 	WebPort       int    `json:"webPort"`
 	WebPassword   string `json:"webPassword"`
@@ -78,4 +80,6 @@ type PairConfig struct {
 	RelayHostname string `json:"relayHostname"`
 	RelayPort     int    `json:"relayPort"`
 	RelayPersist  bool   `json:"relayPersist"`
+	RelayKeyFile  string `json:"relayKeyFile"`
+	RelayCertFile string `json:"relayCertFile"`
 }
