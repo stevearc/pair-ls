@@ -7,7 +7,6 @@ import (
 	"os"
 	"pair-ls/server"
 	"pair-ls/state"
-	"strings"
 	"time"
 
 	"github.com/sourcegraph/jsonrpc2"
@@ -31,7 +30,7 @@ func NewHandler(state *state.WorkspaceState, logger *log.Logger, config *server.
 	}
 	// TODO: make this configurable
 	go debounceChangeText(200*time.Millisecond, changeTextChan, func(change TextChange) {
-		handler.state.ReplaceText(change.Filename, strings.Split(change.Text, "\n"), !handler.clientSendsCursor)
+		handler.state.ReplaceText(change.Filename, change.Text, !handler.clientSendsCursor)
 	})
 
 	if forwardHost != "" {

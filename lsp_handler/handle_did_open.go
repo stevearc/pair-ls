@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"pair-ls/util"
-	"strings"
 
 	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
@@ -23,6 +22,6 @@ func (h *lspHandler) handleTextDocumentDidOpen(ctx context.Context, conn *jsonrp
 	if err != nil {
 		return nil, err
 	}
-	h.state.OpenFile(filename, strings.Split(params.TextDocument.Text, "\n"), params.TextDocument.LanguageID, !h.clientSendsCursor)
+	h.state.OpenFile(filename, params.TextDocument.Text, params.TextDocument.LanguageID, !h.clientSendsCursor)
 	return nil, nil
 }

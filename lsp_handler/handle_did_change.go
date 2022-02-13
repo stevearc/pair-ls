@@ -24,16 +24,15 @@ func (h *lspHandler) handleTextDocumentDidChange(ctx context.Context, conn *json
 	}
 
 	for _, change := range params.ContentChanges {
-		if &change.Range == nil {
-			// TODO
-			h.logger.Println("We don't support incremental changes yet")
-		} else {
+		if change.Range == nil {
 			h.changeTextChan <- TextChange{
 				Filename: filename,
 				Text:     change.Text,
 			}
+			return nil, nil
 		}
 	}
+	h.state.ReplaceTextRanges(filename, params.ContentChanges)
 
 	return nil, nil
 }

@@ -10,7 +10,7 @@ import (
 )
 
 type WorkspaceState struct {
-	files  map[string]File
+	files  map[string]*File
 	view   *View
 	mu     sync.Mutex
 	events EventBus.Bus
@@ -52,7 +52,7 @@ const TOPIC = "all"
 
 func NewState(logger *log.Logger) *WorkspaceState {
 	return &WorkspaceState{
-		files:  make(map[string]File),
+		files:  make(map[string]*File),
 		events: EventBus.New(),
 		logger: logger,
 	}
@@ -91,14 +91,26 @@ func (s *WorkspaceState) CursorMove(filename string, position lsp.Position, rng 
 		s.view.Line = position.Line
 		anyChanges = true
 	}
+	file := s.files[filename]
 	if s.view.Character != position.Character {
-		s.view.Character = position.Character
+		s.view.Character = CharIndexToRune(file.Lines[position.Line], position.Character)
 		anyChanges = true
 	}
 	if rng != nil {
 		if !reflect.DeepEqual(s.view.Range, rng) {
 			anyChanges = true
-			s.view.Range = rng
+			startLine := file.Lines[rng.Start.Line]
+			endLine := file.Lines[rng.End.Line]
+			s.view.Range = &lsp.Range{
+				Start: lsp.Position{
+					Line:      rng.Start.Line,
+					Character: CharIndexToRune(startLine, rng.Start.Character),
+				},
+				End: lsp.Position{
+					Line:      rng.End.Line,
+					Character: CharIndexToRune(endLine, rng.End.Character),
+				},
+			}
 		}
 	} else if s.view.Range != nil {
 		s.view.Range = nil
@@ -111,12 +123,12 @@ func (s *WorkspaceState) CursorMove(filename string, position lsp.Position, rng 
 	}
 }
 
-func (s *WorkspaceState) OpenFile(filename string, text []string, language string, updateCursor bool) {
+func (s *WorkspaceState) OpenFile(filename string, text string, language string, updateCursor bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.files[filename] = File{
+	s.files[filename] = &File{
 		Filename: filename,
-		Lines:    text,
+		Lines:    SplitLines(text),
 		Language: language,
 	}
 	s.publish(OpenFileEvent{
@@ -145,18 +157,31 @@ func (s *WorkspaceState) CloseFile(filename string) {
 	})
 }
 
-func (s *WorkspaceState) ReplaceText(filename string, text []string, updateCursor bool) {
+func (s *WorkspaceState) ReplaceTextRanges(filename string, changes []lsp.TextDocumentContentChangeEvent) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	file := s.files[filename]
+	file.Lines = applyTextChanges(file.Lines, changes)
+	// TODO sync this smarter
+	s.publish(ReplaceTextEvent{
+		Filename: filename,
+		Text:     file.Lines,
+	})
+}
+
+func (s *WorkspaceState) ReplaceText(filename string, text string, updateCursor bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	newLines := SplitLines(text)
 	prev := s.files[filename]
-	s.files[filename] = File{
+	s.files[filename] = &File{
 		Filename: prev.Filename,
 		Language: prev.Language,
-		Lines:    text,
+		Lines:    newLines,
 	}
 	s.publish(ReplaceTextEvent{
 		Filename: filename,
-		Text:     text,
+		Text:     newLines,
 	})
 
 	if updateCursor {
@@ -164,17 +189,17 @@ func (s *WorkspaceState) ReplaceText(filename string, text []string, updateCurso
 		col := 0
 		lnum = -1
 		for i, line := range prev.Lines {
-			if i >= len(text) {
+			if i >= len(newLines) {
 				lnum = i
 				break
-			} else if line != text[i] {
+			} else if line != newLines[i] {
 				lnum = i
-				col = longestCommonPrefix(line, text[i])
+				col = longestCommonPrefix(line, newLines[i])
 				break
 			}
 		}
 		if lnum == -1 {
-			lnum = len(text)
+			lnum = len(newLines)
 		}
 		s.view = &View{
 			Filename:  filename,
@@ -193,7 +218,7 @@ func (s *WorkspaceState) GetFiles() map[string]File {
 
 	ret := make(map[string]File)
 	for key, value := range s.files {
-		ret[key] = value
+		ret[key] = *value
 	}
 	return ret
 }

@@ -50,10 +50,8 @@ func (h *lspHandler) handleInitialize(ctx context.Context, conn *jsonrpc2.Conn, 
 			HoverProvider: !h.clientSendsCursor,
 			TextDocumentSync: &lsp.TextDocumentSyncOptionsOrKind{
 				Options: &lsp.TextDocumentSyncOptions{
-					OpenClose: true,
-					// TODO implement incremental sync
-					// Change:            lsp.TDSKIncremental,
-					Change:            lsp.TDSKFull,
+					OpenClose:         true,
+					Change:            lsp.TDSKIncremental,
 					WillSave:          false,
 					WillSaveWaitUntil: false,
 				},
