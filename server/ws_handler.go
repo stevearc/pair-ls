@@ -87,6 +87,8 @@ func (h *websocketHandler) run(conn *jsonrpc2.Conn) {
 			conn.Notify(context.Background(), "closeFile", value)
 		case state.ReplaceTextEvent:
 			conn.Notify(context.Background(), "textReplaced", value)
+		case state.UpdateTextEvent:
+			conn.Notify(context.Background(), "updateText", value)
 		case state.ChangeViewEvent:
 			conn.Notify(context.Background(), "updateView", value)
 		default:

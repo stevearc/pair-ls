@@ -25,6 +25,12 @@ export type View = {
   range?: Range;
 };
 
+export type ChangeTextRange = {
+  start_line: number;
+  end_line: number;
+  text: string[];
+};
+
 export type File = {
   filename: string;
   language: string;
@@ -78,6 +84,11 @@ export type AppAction =
   | {
       type: "updateView";
       view: View;
+    }
+  | {
+      type: "updateText";
+      filename: string;
+      changes: ChangeTextRange[];
     }
   // User actions
   | {
@@ -148,6 +159,26 @@ export function reducer(state: AppState, action: AppAction): AppState {
           },
         },
       };
+    case "updateText": {
+      const newLines = [...(state.files[action.filename].lines ?? [])];
+      for (const change of action.changes) {
+        newLines.splice(
+          change.start_line,
+          change.end_line - change.start_line + 1,
+          ...change.text
+        );
+      }
+      return {
+        ...state,
+        files: {
+          ...state.files,
+          [action.filename]: {
+            ...state.files[action.filename],
+            lines: newLines,
+          },
+        },
+      };
+    }
     case "updateView":
       if (state.follow) {
         return {

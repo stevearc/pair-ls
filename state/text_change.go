@@ -59,15 +59,16 @@ func CharIndexToRune(line string, character int) int {
 	return len(utf16.Decode(u16))
 }
 
-func applyTextChanges(text []string, changes []lsp.TextDocumentContentChangeEvent) []string {
+func applyTextChanges(text []string, changes []lsp.TextDocumentContentChangeEvent) ([]string, []ChangeTextRange) {
 	// NOTE: We know that this function is ONLY called if all of the change.Range fields are non-nil
 
 	// First sort in reverse order so we can make the changes without worrying about changing the indexes
 	sort.Sort(ReverseOrder(changes))
+	changeText := make([]ChangeTextRange, 0, len(changes))
 	for _, change := range changes {
 		rng := *change.Range
+		newLines := SplitLines(change.Text)
 		if change.Text != "" {
-			newLines := SplitLines(change.Text)
 			col := rng.Start.Character
 			var remainder string
 			for i, newLine := range newLines {
@@ -101,8 +102,13 @@ func applyTextChanges(text []string, changes []lsp.TextDocumentContentChangeEven
 		} else {
 			text = deleteRange(text, *change.Range)
 		}
+		changeText = append(changeText, ChangeTextRange{
+			StartLine: change.Range.Start.Line,
+			EndLine:   change.Range.End.Line,
+			Text:      text[change.Range.Start.Line : change.Range.Start.Line+len(newLines)],
+		})
 	}
-	return text
+	return text, changeText
 }
 
 func deleteRange(text []string, rng lsp.Range) []string {

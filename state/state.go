@@ -44,6 +44,17 @@ type ReplaceTextEvent struct {
 	Text     []string `json:"text"`
 }
 
+type ChangeTextRange struct {
+	StartLine int      `json:"start_line"`
+	EndLine   int      `json:"end_line"`
+	Text      []string `json:"text"`
+}
+
+type UpdateTextEvent struct {
+	Filename string            `json:"filename"`
+	Changes  []ChangeTextRange `json:"changes"`
+}
+
 type ChangeViewEvent struct {
 	View View `json:"view"`
 }
@@ -161,11 +172,11 @@ func (s *WorkspaceState) ReplaceTextRanges(filename string, changes []lsp.TextDo
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	file := s.files[filename]
-	file.Lines = applyTextChanges(file.Lines, changes)
-	// TODO sync this smarter
-	s.publish(ReplaceTextEvent{
+	var changeText []ChangeTextRange
+	file.Lines, changeText = applyTextChanges(file.Lines, changes)
+	s.publish(UpdateTextEvent{
 		Filename: filename,
-		Text:     file.Lines,
+		Changes:  changeText,
 	})
 }
 

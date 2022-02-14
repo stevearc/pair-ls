@@ -31,7 +31,10 @@ export default function WindowComponent({ filename }: { filename: string }) {
     return null;
   }
   const file = state.files[filename];
-  const lines = file?.lines;
+  if (file == null) {
+    return null;
+  }
+  const lines = file.lines;
   if (lines == null) {
     throw client.getText(filename);
   }

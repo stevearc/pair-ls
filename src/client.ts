@@ -1,4 +1,4 @@
-import { Dispatcher, View, FileMap, showToast } from "./state";
+import { Dispatcher, View, FileMap, showToast, ChangeTextRange } from "./state";
 import WebSocketRPC from "./websocket_rpc";
 
 export default class Client {
@@ -129,6 +129,21 @@ export default class Client {
       type: "setText",
       filename,
       text,
+    });
+  }
+
+  // @ts-ignore
+  private onUpdateText({
+    filename,
+    changes,
+  }: {
+    filename: string;
+    changes: ChangeTextRange[];
+  }) {
+    this.dispatch({
+      type: "updateText",
+      filename,
+      changes,
     });
   }
 
