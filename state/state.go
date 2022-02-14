@@ -19,7 +19,7 @@ type WorkspaceState struct {
 
 type File struct {
 	Filename string   `json:"filename"`
-	Lines    []string `json:"lines"`
+	Lines    []string `json:"lines,omitempty"`
 	Language string   `json:"language"`
 }
 
@@ -218,7 +218,10 @@ func (s *WorkspaceState) GetFiles() map[string]File {
 
 	ret := make(map[string]File)
 	for key, value := range s.files {
-		ret[key] = *value
+		ret[key] = File{
+			Filename: value.Filename,
+			Language: value.Language,
+		}
 	}
 	return ret
 }
