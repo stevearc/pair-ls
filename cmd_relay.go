@@ -54,7 +54,6 @@ func (cmd *relayCommand) Run(args []string) {
 	handler := lsp_handler.NewHandler(state, lspLogger, &server.ServerConfig{}, "")
 
 	relayConf := relay_server.ServerConfig{
-		KeyFile:  cmd.config.RelayKeyFile,
 		CertFile: cmd.config.RelayCertFile,
 		Persist:  cmd.config.RelayPersist,
 	}

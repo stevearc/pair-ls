@@ -24,7 +24,6 @@ type RelayServer struct {
 }
 
 type ServerConfig struct {
-	KeyFile  string
 	CertFile string
 	Persist  bool
 }
@@ -43,26 +42,18 @@ func (s *RelayServer) Serve(hostname string, port int) {
 	if port <= 0 {
 		s.logger.Fatalln("Relay server must specify a port with -relay-port")
 	}
-	if s.config.CertFile == "" || s.config.KeyFile == "" {
-		msg := "Relay server requires a keyFile and certFile"
+	if s.config.CertFile == "" {
+		msg := "Relay server requires a certFile"
 		s.logger.Println(msg)
 		log.Fatalln(msg)
 	}
-	pool, _, err := auth.LoadCertFromPEM(s.config.CertFile)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	priv, err := auth.LoadPrivateKeyPEM(s.config.KeyFile)
+	cert, pool, err := auth.LoadCertPem(s.config.CertFile)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.on_websocket)
-	cert := tls.Certificate{
-		Certificate: pool.Subjects(),
-		PrivateKey:  priv,
-	}
 	config := tls.Config{
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		Certificates: []tls.Certificate{cert},
@@ -90,7 +81,7 @@ func (s *RelayServer) Serve(hostname string, port int) {
 			}
 		}
 	}()
-	log.Fatal(srv.ListenAndServeTLS(s.config.CertFile, s.config.KeyFile))
+	log.Fatal(srv.ListenAndServeTLS("", ""))
 }
 
 func (s *RelayServer) on_websocket(w http.ResponseWriter, r *http.Request) {

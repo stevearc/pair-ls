@@ -11,9 +11,9 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-func forward(forwardHost string, logger *log.Logger, forwardChan chan *jsonrpc2.Request, certFile string, keyFile string) {
-	if certFile == "" || keyFile == "" {
-		msg := "Forwarding to relay server requires a keyFile and certFile"
+func forward(forwardHost string, logger *log.Logger, forwardChan chan *jsonrpc2.Request, certFile string) {
+	if certFile == "" {
+		msg := "Forwarding to relay server requires a certFile"
 		logger.Println(msg)
 		log.Fatalln(msg)
 	}
@@ -25,7 +25,7 @@ func forward(forwardHost string, logger *log.Logger, forwardChan chan *jsonrpc2.
 	if err != nil {
 		log.Fatal("Invalid forwardHost:", err)
 	}
-	dialer, err := auth.GetTLSDialer(certFile, keyFile)
+	dialer, err := auth.GetTLSDialer(certFile)
 	if err != nil {
 		log.Fatal("Cert error:", err)
 	}

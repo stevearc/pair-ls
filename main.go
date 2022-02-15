@@ -37,7 +37,6 @@ func main() {
 	flag.IntVar(&config.LogLevel, "loglevel", config.LogLevel, "Log detail")
 	flag.StringVar(&config.WebKeyFile, "web-key", config.WebKeyFile, "Path to the TLS key file for the webserver")
 	flag.StringVar(&config.WebCertFile, "web-cert", config.WebCertFile, "Path to the TLS cert file for the webserver")
-	flag.StringVar(&config.RelayKeyFile, "relay-key", config.RelayKeyFile, "Path to the TLS key file for the relay server")
 	flag.StringVar(&config.RelayCertFile, "relay-cert", config.RelayCertFile, "Path to the TLS cert file for the relay server")
 	command.On("lsp", "Run the LSP server", NewLSPCmd(config), []string{})
 	command.On("relay", "Run a relay server", NewRelayCmd(config), []string{})
@@ -80,6 +79,5 @@ type PairConfig struct {
 	RelayHostname string `json:"relayHostname"`
 	RelayPort     int    `json:"relayPort"`
 	RelayPersist  bool   `json:"relayPersist"`
-	RelayKeyFile  string `json:"relayKeyFile"`
 	RelayCertFile string `json:"relayCertFile"`
 }

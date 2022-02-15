@@ -35,7 +35,7 @@ func NewHandler(state *state.WorkspaceState, logger *log.Logger, config *server.
 
 	if forwardHost != "" {
 		handler.forwardChan = make(chan *jsonrpc2.Request)
-		go forward(forwardHost, logger, handler.forwardChan, config.CertFile, config.KeyFile)
+		go forward(forwardHost, logger, handler.forwardChan, config.CertFile)
 	}
 	return jsonrpc2.HandlerWithError(handler.handle)
 }

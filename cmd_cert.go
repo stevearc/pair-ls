@@ -27,7 +27,7 @@ func NewCertCmd(conf *PairConfig) command.Cmd {
 }
 
 func (cmd *certCommand) Flags(fs *flag.FlagSet) *flag.FlagSet {
-	fs.StringVar(&cmd.outfile, "out", "server", "Output file")
+	fs.StringVar(&cmd.outfile, "out", "relay", "Output file")
 	fs.StringVar(&cmd.dns, "dns", "", "Domain name of the host (e.g. www.mycode.com)")
 	return fs
 }
@@ -64,33 +64,24 @@ func (cmd *certCommand) Run(args []string) {
 		return
 	}
 
-	ca_file := fmt.Sprintf("%s.pem", cmd.outfile)
-	certOut, err := os.Create(ca_file)
+	certFile := fmt.Sprintf("%s.pem", cmd.outfile)
+	certOut, err := os.OpenFile(certFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Failed to open %s for writing: %v\n", ca_file, err)
+		log.Fatalf("Failed to open %s for writing: %v\n", certFile, err)
 	}
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		log.Fatalf("Failed to write data to %s: %v\n", ca_file, err)
+		log.Fatalf("Failed to write data to %s: %v\n", certFile, err)
 	}
-	if err := certOut.Close(); err != nil {
-		log.Fatalf("Error closing %s: %v\n", ca_file, err)
-	}
-	fmt.Printf("wrote %s\n", ca_file)
 
-	keyFile := fmt.Sprintf("%s.key.pem", cmd.outfile)
-	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		log.Fatalf("Failed to open %s for writing: %v\n", keyFile, err)
-	}
 	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
 	if err != nil {
 		log.Fatalf("Unable to marshal private key: %v\n", err)
 	}
-	if err := pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
-		log.Fatalf("Failed to write data to %s: %v\n", keyFile, err)
+	if err := pem.Encode(certOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
+		log.Fatalf("Failed to write data to %s: %v\n", certFile, err)
 	}
-	if err := keyOut.Close(); err != nil {
-		log.Fatalf("Error closing %s: %v\n", keyFile, err)
+	if err := certOut.Close(); err != nil {
+		log.Fatalf("Error closing %s: %v\n", certFile, err)
 	}
-	fmt.Printf("wrote %s\n", keyFile)
+	fmt.Printf("wrote %s\n", certFile)
 }

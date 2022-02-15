@@ -48,8 +48,6 @@ func (cmd *lspCommand) Run(args []string) {
 	}
 
 	conf := server.ServerConfig{
-		Password: "",
-		KeyFile:  cmd.config.RelayKeyFile,
 		CertFile: cmd.config.RelayCertFile,
 	}
 	lspLogger := log.New(f, "[LSP server]", log.Ldate|log.Ltime|log.Lshortfile)

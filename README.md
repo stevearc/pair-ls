@@ -73,8 +73,8 @@ listen for connections from a forwarding server and can also host the webserver
 (with `-web-port`).
 
 Note that the relay server _requires_ an encrypted channel, so both your local
-machine and the relay server must have a matching set of certificates (see the
-section on [encryption](#encryption) below).
+machine and the relay server must have matching certificates (see the section on
+[encryption](#encryption) below).
 
 ### Password protection
 
@@ -94,14 +94,17 @@ An easy and free way to get certificates is using [Let's
 Encrypt](https://letsencrypt.org/).
 
 If you are using a relay server, both the forwarding client and the relay server
-need to have the same pair of cert and key files. They should be passed in with
-`-relay-cert` and `-relay-key`, or be put in the config file. There is an easy helper command `pair-ls cert` that will generate a self-signed certificate for you that will work for this purpose.
+need to have the same certificate. It should be passed in with `-relay-cert`, or
+be put in the config file. There is an easy helper command `pair-ls cert` that
+will generate a self-signed certificate for you that will work for this purpose.
 
 You can also use the `pair-ls cert` certs for your webserver, but since it's
 self-signed your browser will give you a big "Your connection is not private"
 warning message that you will have to click through (and if you don't manually
 verify the certificate your browser shows you, you could be vulnerable to a [MITM
-attack](https://en.wikipedia.org/wiki/Man-in-the-middle_attack)).
+attack](https://en.wikipedia.org/wiki/Man-in-the-middle_attack)). You will also
+have to split the generated pem file into separate "certificate" and "key"
+files.
 
 A full configuration for a local forwarding server and a remote relay server
 that is also running the webserver looks like this:
@@ -111,7 +114,6 @@ Local server (`pair-ls lsp`):
 ```json
 {
   "forwardHost": "remote.server:8888",
-  "relayKeyFile": "/path/to/relay.key.pem",
   "relayCertFile": "/path/to/relay.pem"
 }
 ```
@@ -121,7 +123,6 @@ Relay server (`pair-ls relay`):
 ```json
 {
   "relayPort": 8888,
-  "relayKeyFile": "/path/to/relay.key.pem",
   "relayCertFile": "/path/to/relay.pem",
   "webPort": 80,
   "webKeyFile": "/path/to/server.key.pem",
@@ -147,7 +148,6 @@ values can be specified on the command line instead, if you prefer (run
 | `relayHostname` | Relay server binds to this hostname                                                       |
 | `relayPort`     | Relay server listens on this port                                                         |
 | `relayPersist`  | Relay server retains file data even after forwarding clients disconnect (default `false`) |
-| `relayKeyFile`  | Private key file to encrypt connection to relay server                                    |
 | `relayCertFile` | Certificate file to encrypt connection to relay server                                    |
 
 ## Alternatives
