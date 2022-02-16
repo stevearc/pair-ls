@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"unicode"
 
 	"github.com/sourcegraph/go-lsp"
@@ -36,4 +37,34 @@ func ContainsStr(container []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+func CreateShareURL(server string, token string) string {
+	if token != "" {
+		token = "/" + token
+	}
+	proto := "http://"
+	if strings.HasPrefix(server, "wss://") {
+		proto = "https://"
+	}
+	server = strings.TrimPrefix(server, "ws://")
+	server = strings.TrimPrefix(server, "wss://")
+	pieces := strings.Split(server, ":")
+	if len(pieces) < 2 {
+		return proto + server + token
+	}
+	portStr := pieces[1]
+	showPort := true
+	if portStr == "443" {
+		showPort = false
+		proto = "https://"
+	} else if portStr == "80" {
+		showPort = false
+		proto = "http://"
+	}
+	if showPort {
+		return proto + server + token
+	} else {
+		return proto + pieces[0] + token
+	}
 }

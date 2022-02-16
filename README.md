@@ -1,6 +1,8 @@
 # pair-ls
 
-pair-ls is a lightweight, editor-agnostic tool for remote pair-programming.
+Pair-ls is a lightweight, editor-agnostic tool for remote pair-programming. It
+allows you to easily share the files you are working on in a read-only manner.
+Pair-ls is _not_ a collaborative editor. If you're wondering why you would use pair-ls, read the [comparison](#comparison) section.
 
 :warning: pair-ls is currently in **Alpha** status. Expect breaking API changes.
 Backwards compatibility will be respected _after_ the first release.
@@ -9,6 +11,7 @@ Backwards compatibility will be respected _after_ the first release.
 - [Setup](#setup)
 - [Sharing](#sharing)
 - [Configuration](#configuration)
+- [Comparison](#comparison)
 - [Alternatives](#alternatives)
 - [Technical Overview](#technical-overview)
 
@@ -26,9 +29,9 @@ yarn](https://classic.yarnpkg.com/lang/en/docs/install/) and [go build tools](ht
 | Feature            | No plugin | Neovim |
 | ------------------ | --------- | ------ |
 | Read-only web view | ✓         | ✓      |
-| Cursor tracking    | ✓\*       | ✓      |
+| Cursor tracking    | ~         | ✓      |
 
-\*Cursor tracking is limited
+~ means limited functionality
 
 **Editor plugins:**
 
@@ -45,117 +48,124 @@ more info on how to share this page, see [Sharing](#sharing).
 ## Sharing
 
 Running `pair-ls lsp -port 8080` is an easy way to get started, but how can you
-share this with other people? There are two basic ways, and both of them require
-you to have a server that is accessible by both users.
+share this across the internet?
 
-### Port forwarding
+The quickest way with no setup required is to use [WebRTC
+connections](docs/WEBRTC.md).
 
-The easiest option is to forward a port from your remote server. First, make
-sure that your server has `GatewayPorts yes` in the `sshd_config` file (and
-restart the service if you had to change it).
+If you have access to a server with a public IP address that is reachable by
+both parties, you have options that will be a bit more convenient and more
+reliable. The most straightforward is [ssh port forwarding](docs/PORT_FORWARDING.md), but you can also set up [a relay server](docs/RELAY.md).
 
-Then from your local machine, run:
-
-```
-ssh -R 80:localhost:8080 my.server.com
-```
-
-This will forward port 80 on my.server.com to your localhost port 8080. Change
-the ports and hostname as needed.
-
-For more on port forwarding, see https://www.ssh.com/academy/ssh/tunneling/example#remote-forwarding
-
-### Relay server
-
-If you run `pair-ls lsp` with the `-forward <host>` option, it will forward all
-of its data to a relay server. The relay server (run with `pair-ls relay`) will
-listen for connections from a forwarding server and can also host the webserver
-(with `-web-port`).
-
-Note that the relay server _requires_ an encrypted channel, so both your local
-machine and the relay server must have matching certificates (see the section on
-[encryption](#encryption) below).
+For completeness, you can also set up a [signal server](docs/SIGNAL.md), but that has all the drawbacks of both the WebRTC approach and the relay server approach.
 
 ### Password protection
 
-If any part of this is accessible from the public internet, you should probably
-enable password-protection. Simply provide a password, either via the [config
-file](#configuration) or with the environment variable `PAIR_WEB_PASS`. The
-webserver will now require this password before allowing access. Whenever you do
-this, you should also enable [Encryption](#encryption) so your password can't be
-sniffed.
-
-### Encryption
-
-You can provide a x509 certificate and private key file to enable TLS (https)
-support for the webserver. These can be passed in with the `-web-cert` and
-`-web-key` arguments, or they can be put in the [config file](#configuration).
-An easy and free way to get certificates is using [Let's
-Encrypt](https://letsencrypt.org/).
-
-If you are using a relay server, both the forwarding client and the relay server
-need to have the same certificate. It should be passed in with `-relay-cert`, or
-be put in the config file. There is an easy helper command `pair-ls cert` that
-will generate a self-signed certificate for you that will work for this purpose.
-
-You can also use the `pair-ls cert` certs for your webserver, but since it's
-self-signed your browser will give you a big "Your connection is not private"
-warning message that you will have to click through (and if you don't manually
-verify the certificate your browser shows you, you could be vulnerable to a [MITM
-attack](https://en.wikipedia.org/wiki/Man-in-the-middle_attack)). You will also
-have to split the generated pem file into separate "certificate" and "key"
-files.
-
-A full configuration for a local forwarding server and a remote relay server
-that is also running the webserver looks like this:
-
-Local server (`pair-ls lsp`):
-
-```json
-{
-  "forwardHost": "remote.server:8888",
-  "relayCertFile": "/path/to/relay.pem"
-}
-```
-
-Relay server (`pair-ls relay`):
-
-```json
-{
-  "relayPort": 8888,
-  "relayCertFile": "/path/to/relay.pem",
-  "webPort": 80,
-  "webKeyFile": "/path/to/server.key.pem",
-  "webCertFile": "/path/to/server.pem",
-  "webPassword": "asdfasdf"
-}
-```
+If you opt to use port forwarding or a relay server, you should make sure to
+enable password protection to prevent anyone on the internet from seeing your
+code. Simply provide a password, either via the [config file](#configuration) or
+with the environment variable `PAIR_WEB_PASS`. The webserver will now require
+this password before allowing access. You should also make sure your site it
+hosted over https so the password can't be trivially sniffed (see
+[encryption](docs/RELAY.md#encryption)).
 
 ## Configuration
 
-The configuration file can be found at `$XDG_CONFIG_HOME/pair-ls.json`. Most
+The configuration file can be found at `$XDG_CONFIG_HOME/pair-ls.toml`. Most
 values can be specified on the command line instead, if you prefer (run
-`pair-ls` for detailed help). The possible values are:
+`pair-ls` for detailed help).
 
-| Key             | Description                                                                               |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| `logFile`       | Logs will be written here (default `$XDG_CACHE_HOME/pair-ls.log`)                         |
-| `webKeyFile`    | Private key file for webserver TLS                                                        |
-| `webCertFile`   | Certificate file for webserver TLS                                                        |
-| `webHostname`   | Webserver binds to this hostname                                                          |
-| `webPassword`   | Password to restrict access to webpage                                                    |
-| `forwardHost`   | Address of the relay server                                                               |
-| `relayHostname` | Relay server binds to this hostname                                                       |
-| `relayPort`     | Relay server listens on this port                                                         |
-| `relayPersist`  | Relay server retains file data even after forwarding clients disconnect (default `false`) |
-| `relayCertFile` | Certificate file to encrypt connection to relay server                                    |
+```toml
+# Default log file is $XDG_CACHE_HOME/pair-ls.log
+logFile = "/path/to/file.log"
+
+# For the relay server. When false (the default) all files are cleared from the
+# server when the last editor connection is closed.
+relayPersist = false
+
+# The static site hosting the WebRTC connection code
+staticRTCSite = "https://code.stevearc.com/"
+
+# The one-time WebRTC connection token generated from the static WebRTC site
+# Editor plugins provide a better way to pass this in, so only use the option if
+# your editor doesn't have a plugin.
+callToken = ""
+
+[server]
+# If provided, will require password auth from web client
+webPassword = "passw0rd"
+# If provided, will require connecting pair-ls LSP to provide this password in
+# the [client] section (only used for relay & signal servers)
+lspPassword = "secur3"
+# If provided, will secure all connections with TLS
+certFile = "/path/to/cert.pem"
+# If the private key is not in the certFile PEM, you can pass it in separately here
+keyFile = "/path/to/cert.key.pem"
+# If true, will require pair-ls LSP to provide a matching client cert.
+# This is the certFile under the [client] section.
+requireClientCert = false
+# PEM file with one or more certs that pair-ls LSP can match
+# (when requireClientCert = true; only used for relay & signal servers)
+clientCAs = "/path/to/pool.pem"
+
+[client]
+# Provide this certificate to the relay/signal server when connecting
+certFile = "/path/to/cert.pem"
+# If the private key is not in the certFile PEM, you can pass it in separately here
+keyFile = "/path/to/cert.key.pem"
+# If the relay/signal server requires a password, supply it here
+password = "secur3"
+```
+
+## Comparison
+
+Pairing tools fall into roughly 3 categories: **screen sharing**, **web
+editors** that require you to use their in-browser editor, and **editor
+plugins**.
+
+**Screen sharing**:
+
+- **Pros**:
+  - Very easy, they're built into the tools you're already using to call your partners
+  - You see exactly what the sharer is doing, across all windows and applications
+- **Cons**:
+  - Video artifacts can make text hard to read
+  - Text is often too small unless the sharer increases the size dramatically
+  - You can only see exactly what the editor sees
+  - Read-only sharing
+
+**Web editor**:
+
+- **Pros**:
+  - No installation required
+  - Often have collaborative editing functionality
+- **Cons**:
+  - You have to use their editor
+  - You have to use their entire editing ecosystem, since it's not simply working with files on your own computer
+
+**Editor plugin**:
+
+- **Pros**:
+  - You can use your own editor
+  - Often have collaborative editing functionality
+- **Cons**:
+  - Requires installation
+  - Your editor has to have a plugin available
+  - Everyone has to be using the same editor
+  - Only shares editor state, nothing in other windows
+
+**Pair-ls**:
+
+- **Pros**:
+  - You can use your own editor
+- **Cons**:
+  - Requires installation
+  - Read-only sharing
+  - Only shares files. You can't see open terminals or anything else the sharer is doing in the editor
 
 ## Alternatives
 
-Other options fall into roughly 3 categories: **screen sharing** tools, **web
-editors** that require you to use their in-browser editor, and **editor
-plugins** that, best-case, support a few popular editors. Most of these are paid
-apps/services, though many of those have a free tier.
+Most of these are paid apps/services, though many of those have a free tier.
 
 - Screen sharing
   - [Tuple](https://tuple.app/) (paid)
@@ -191,4 +201,4 @@ then expose that information to a web client, or to replicate it to a relay serv
 
 Editor plugins add extensions on top of LSP to allow for enhanced features (see
 differences in [Setup](#setup)) that aren't possible with the current state of
-LSP.
+LSP (e.g. tracking cursor movement).

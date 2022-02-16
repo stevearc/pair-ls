@@ -18,5 +18,7 @@ pair-ls
 node_modules/
 dist/
 server/dist/
+static/
+.aws_credentials
 
 yarn-error.log

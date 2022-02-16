@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"pair-ls/lsp_handler"
-	"pair-ls/relay_server"
 	"pair-ls/server"
 	"pair-ls/state"
 
@@ -14,6 +13,8 @@ import (
 
 type relayCommand struct {
 	config *PairConfig
+	host   string
+	port   int
 }
 
 func NewRelayCmd(conf *PairConfig) command.Cmd {
@@ -23,10 +24,9 @@ func NewRelayCmd(conf *PairConfig) command.Cmd {
 }
 
 func (cmd *relayCommand) Flags(fs *flag.FlagSet) *flag.FlagSet {
-	fs.StringVar(&cmd.config.WebHostname, "web-hostname", cmd.config.WebHostname, "Hostname for webserver to bind to")
-	fs.IntVar(&cmd.config.WebPort, "web-port", cmd.config.WebPort, "Port for webserver to listen on")
-	fs.StringVar(&cmd.config.RelayHostname, "relay-hostname", cmd.config.RelayHostname, "Hostname for relay server to bind to")
-	fs.IntVar(&cmd.config.RelayPort, "relay-port", cmd.config.RelayPort, "Port for relay server to listen on")
+	fs.StringVar(&cmd.host, "host", "", "Hostname to bind to")
+	fs.IntVar(&cmd.port, "port", -1, "Port to listen on")
+	addServerFlags(cmd.config, fs)
 	fs.BoolVar(&cmd.config.RelayPersist, "persist", cmd.config.RelayPersist, "Keep file data even after all forwarding servers disconnect")
 	return fs
 }
@@ -40,23 +40,14 @@ func (cmd *relayCommand) Run(args []string) {
 
 	state := state.NewState(log.New(f, "[State]", log.Ldate|log.Ltime|log.Lshortfile))
 
-	if cmd.config.WebPort > 0 {
-		conf := server.ServerConfig{
-			Password: cmd.config.WebPassword,
-			KeyFile:  cmd.config.WebKeyFile,
-			CertFile: cmd.config.WebCertFile,
-		}
-		server := server.NewServer(state, log.New(f, "[Webserver]", log.Ldate|log.Ltime|log.Lshortfile), conf)
-		go server.Serve(cmd.config.WebHostname, cmd.config.WebPort)
-	}
-
 	lspLogger := log.New(f, "[LSP server]", log.Ldate|log.Ltime|log.Lshortfile)
-	handler := lsp_handler.NewHandler(state, lspLogger, &server.ServerConfig{}, "")
+	handler := lsp_handler.NewHandler(state, lspLogger, &lsp_handler.HandlerConfig{})
 
-	relayConf := relay_server.ServerConfig{
-		CertFile: cmd.config.RelayCertFile,
-		Persist:  cmd.config.RelayPersist,
+	srv := server.NewServer(state, log.New(f, "[Relay]", log.Ldate|log.Ltime|log.Lshortfile), cmd.config.Server)
+
+	relayConf := server.RelayConfig{
+		Persist: cmd.config.RelayPersist,
 	}
-	relayServer := relay_server.NewServer(handler, log.New(f, "[Relay]", log.Ldate|log.Ltime|log.Lshortfile), state, relayConf)
-	relayServer.Serve(cmd.config.RelayHostname, cmd.config.RelayPort)
+	srv.AddRelayServer(handler.GetRPCHandler(), relayConf)
+	srv.Serve(cmd.host, cmd.port)
 }

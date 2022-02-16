@@ -18,10 +18,17 @@ type websocketHandler struct {
 	authed   bool
 }
 
+type InitializeClient struct {
+	View  *state.View           `json:"view"`
+	Files map[string]state.File `json:"files"`
+}
+
+type GetFileRequest struct {
+	Filename string `json:"filename"`
+}
+
 func (h *websocketHandler) handleGetFile(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
-	var params struct {
-		Filename string `json:"filename"`
-	}
+	var params GetFileRequest
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
@@ -46,10 +53,7 @@ func (h *websocketHandler) handleAuth(ctx context.Context, conn *jsonrpc2.Conn, 
 	}
 
 	h.authed = true
-	conn.Notify(context.Background(), "initialize", struct {
-		View  *state.View           `json:"view"`
-		Files map[string]state.File `json:"files"`
-	}{
+	conn.Notify(context.Background(), "initialize", InitializeClient{
 		View:  h.state.GetView(),
 		Files: h.state.GetFiles(),
 	})
@@ -75,11 +79,8 @@ func (h *websocketHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req 
 	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: fmt.Sprintf("method not supported: %s", req.Method)}
 }
 
-func (h *websocketHandler) run(conn *jsonrpc2.Conn) {
-	var callback = func(value interface{}) {
-		if !h.authed {
-			return
-		}
+func GetForwardStateChangesCallback(logger *log.Logger, conn *jsonrpc2.Conn) func(interface{}) {
+	return func(value interface{}) {
 		switch t := value.(type) {
 		case state.OpenFileEvent:
 			conn.Notify(context.Background(), "openFile", value)
@@ -92,7 +93,16 @@ func (h *websocketHandler) run(conn *jsonrpc2.Conn) {
 		case state.ChangeViewEvent:
 			conn.Notify(context.Background(), "updateView", value)
 		default:
-			h.logger.Println("Received unknown type from state", t)
+			logger.Println("Received unknown type from state", t)
+		}
+	}
+}
+
+func (h *websocketHandler) run(conn *jsonrpc2.Conn) {
+	var forward = GetForwardStateChangesCallback(h.logger, conn)
+	var callback = func(value interface{}) {
+		if h.authed {
+			forward(value)
 		}
 	}
 	h.state.Subscribe(callback)

@@ -4,43 +4,67 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
-	"pair-ls/server"
 	"pair-ls/state"
+	"sync"
 	"time"
 
+	"github.com/pion/webrtc/v3"
+	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-type lspHandler struct {
+type LspHandler struct {
 	logger            *log.Logger
+	config            *HandlerConfig
+	lspConn           *jsonrpc2.Conn
 	rootPath          string
+	initialized       bool
 	state             *state.WorkspaceState
 	clientSendsCursor bool
 	changeTextChan    chan TextChange
 	forwardChan       chan *jsonrpc2.Request
+	peerMap           map[string]*webrtc.PeerConnection
+	rtc               *webrtc.API
+	mu                sync.Mutex
+	pendingNotifs     []pendingNotif
 }
 
-func NewHandler(state *state.WorkspaceState, logger *log.Logger, config *server.ServerConfig, forwardHost string) jsonrpc2.Handler {
+type HandlerConfig struct {
+	RelayServer   string
+	SignalServer  string
+	StaticRTCSite string
+	ClientAuth    ClientAuthConfig
+}
+
+func NewHandler(state *state.WorkspaceState, logger *log.Logger, config *HandlerConfig) *LspHandler {
 	changeTextChan := make(chan TextChange)
-	handler := &lspHandler{
+	s := webrtc.SettingEngine{}
+	s.DetachDataChannels()
+
+	handler := &LspHandler{
 		logger:         logger,
+		config:         config,
 		state:          state,
+		rtc:            webrtc.NewAPI(webrtc.WithSettingEngine(s)),
 		changeTextChan: changeTextChan,
+		peerMap:        make(map[string]*webrtc.PeerConnection),
+		pendingNotifs:  make([]pendingNotif, 0),
 	}
 	// TODO: make this configurable
-	go debounceChangeText(200*time.Millisecond, changeTextChan, func(change TextChange) {
+	go debounceChangeText(200*time.Millisecond, handler.changeTextChan, func(change TextChange) {
 		handler.state.ReplaceText(change.Filename, change.Text, !handler.clientSendsCursor)
 	})
 
-	if forwardHost != "" {
-		handler.forwardChan = make(chan *jsonrpc2.Request)
-		go forward(forwardHost, logger, handler.forwardChan, config.CertFile)
-	}
-	return jsonrpc2.HandlerWithError(handler.handle)
+	return handler
 }
 
-func (h *lspHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LspHandler) GetRPCHandler() jsonrpc2.Handler {
+	return jsonrpc2.HandlerWithError(h.handle)
+}
+
+func (h *LspHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			h.logger.Println("Error handling", req.Method, r)
@@ -54,7 +78,7 @@ func (h *lspHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonr
 	case "initialize":
 		return h.handleInitialize(ctx, conn, req)
 	case "initialized":
-		return
+		return h.handleInitialized(ctx, conn, req)
 	case "shutdown":
 		return h.handleShutdown(ctx, conn, req)
 	case "textDocument/didOpen":
@@ -67,6 +91,8 @@ func (h *lspHandler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonr
 		return h.handleTextDocumentHover(ctx, conn, req)
 	case "experimental/cursor":
 		return h.handleCursorMove(ctx, conn, req)
+	case "experimental/connectToPeer":
+		return h.handleConnectToPeer(ctx, conn, req)
 	}
 
 	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: fmt.Sprintf("method not supported: %s", req.Method)}
@@ -98,22 +124,72 @@ func debounceChangeText(interval time.Duration, input chan TextChange, cb func(a
 	}
 }
 
-func ListenOnStdin(handler jsonrpc2.Handler, logger *log.Logger, loglevel int) {
+func (h *LspHandler) ListenOnStdin(logger *log.Logger, loglevel int, callToken string) {
+	if h.config.SignalServer != "" {
+		go h.listenForRTC(h.config.SignalServer, h.config.ClientAuth)
+	}
+
+	if h.config.RelayServer != "" {
+		h.forwardChan = make(chan *jsonrpc2.Request)
+		go h.forward(h.config.ClientAuth)
+	}
+
 	var connOpt []jsonrpc2.ConnOpt
 	if loglevel >= 5 {
 		connOpt = append(connOpt, jsonrpc2.LogMessages(logger))
 	}
 
+	if callToken != "" {
+		answer, err := h.respondRTCPeer(callToken)
+		if err != nil {
+			h.logger.Println("Failed to respond to WebRTC call", err)
+		}
+		h.SendShareString(answer)
+	}
+
 	logger.Println("Server listening on stdin")
 	defer logger.Println("Server stopped")
-	<-jsonrpc2.NewConn(
+	h.lspConn = jsonrpc2.NewConn(
 		context.Background(),
 		jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{}),
-		handler, connOpt...).DisconnectNotify()
+		h.GetRPCHandler(), connOpt...)
+	<-h.lspConn.DisconnectNotify()
 }
 
 type AuthRequest struct {
 	Token string `json:"token"`
+}
+
+func (h *LspHandler) SendShareString(shareValue string) {
+	h.showMessage(fmt.Sprintf("Sharing: %s", shareValue), lsp.Info)
+}
+
+func (h *LspHandler) showMessage(message string, mType lsp.MessageType) {
+	method := "window/showMessage"
+	params := lsp.ShowMessageParams{
+		Type:    mType,
+		Message: message,
+	}
+	if h.lspConn == nil || !h.initialized {
+		h.pendingNotifs = append(h.pendingNotifs, pendingNotif{
+			method: method,
+			params: params,
+		})
+	} else {
+		err := h.lspConn.Notify(context.Background(), method, params)
+		if err != nil {
+			h.logger.Println("Error send message to client", message)
+		}
+	}
+}
+
+func (h *LspHandler) createStaticUrl(offer string) string {
+	return h.config.StaticRTCSite + "?t=" + url.QueryEscape(offer)
+}
+
+type pendingNotif struct {
+	method string
+	params interface{}
 }
 
 type stdrwc struct{}

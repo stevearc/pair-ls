@@ -1,10 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"log"
+	"pair-ls/lsp_handler"
+	"pair-ls/server"
 
+	"github.com/BurntSushi/toml"
 	"github.com/rakyll/command"
 
 	"flag"
@@ -18,7 +20,7 @@ func main() {
 		config_home = filepath.Join(os.Getenv("HOME"), ".config")
 	}
 
-	confFile := filepath.Join(config_home, "pair-ls.json")
+	confFile := filepath.Join(config_home, "pair-ls.toml")
 	flag.String("config", confFile, "Path to config file")
 
 	for i, flag := range os.Args {
@@ -35,13 +37,18 @@ func main() {
 
 	flag.StringVar(&config.LogFile, "logfile", config.LogFile, "Logs will be written here")
 	flag.IntVar(&config.LogLevel, "loglevel", config.LogLevel, "Log detail")
-	flag.StringVar(&config.WebKeyFile, "web-key", config.WebKeyFile, "Path to the TLS key file for the webserver")
-	flag.StringVar(&config.WebCertFile, "web-cert", config.WebCertFile, "Path to the TLS cert file for the webserver")
-	flag.StringVar(&config.RelayCertFile, "relay-cert", config.RelayCertFile, "Path to the TLS cert file for the relay server")
 	command.On("lsp", "Run the LSP server", NewLSPCmd(config), []string{})
-	command.On("relay", "Run a relay server", NewRelayCmd(config), []string{})
-	command.On("cert", "Generate certificates for web and relay server", NewCertCmd(config), []string{})
+	command.On("relay", "Run a relay server", NewRelayCmd(config), []string{"port"})
+	command.On("signal", "Run a signal server for making WebRTC connections", NewSignalCmd(config), []string{"port"})
+	command.On("cert", "Generate certificates for relay server", NewCertCmd(config), []string{})
 	command.ParseAndRun()
+}
+
+func addServerFlags(config *PairConfig, fs *flag.FlagSet) {
+	fs.StringVar(&config.Server.KeyFile, "key", config.Server.KeyFile, "Path to the TLS key file for the webserver")
+	fs.StringVar(&config.Server.CertFile, "cert", config.Server.CertFile, "Path to the TLS certificate file for the webserver")
+	fs.StringVar(&config.Server.ClientCAs, "client-ca", config.Server.ClientCAs, "Path to certificate pool used to auth clients with -require-client-cert")
+	fs.BoolVar(&config.Server.RequireClientCert, "require-client-cert", config.Server.RequireClientCert, "Require pair-ls LSP clients to auth with a client certificate")
 }
 
 func readConfig(filename string) (*PairConfig, error) {
@@ -50,34 +57,31 @@ func readConfig(filename string) (*PairConfig, error) {
 		cache_home = filepath.Join(os.Getenv("HOME"), ".cache")
 	}
 	config := PairConfig{
-		LogFile:  filepath.Join(cache_home, "pair-ls.log"),
-		LogLevel: 1,
+		LogFile:       filepath.Join(cache_home, "pair-ls.log"),
+		LogLevel:      1,
+		StaticRTCSite: "https://code.stevearc.com/",
 	}
 	content, err := ioutil.ReadFile(filename)
 	if err == nil {
-		if err := json.Unmarshal(content, &config); err != nil {
+		_, err := toml.Decode(string(content), &config)
+		if err != nil {
 			return nil, err
 		}
 	}
 	webPass := os.Getenv("PAIR_WEB_PASS")
 	if webPass != "" {
-		config.WebPassword = webPass
+		config.Server.WebPassword = webPass
 	}
 
 	return &config, nil
 }
 
 type PairConfig struct {
-	LogFile       string `json:"logFile"`
-	LogLevel      int    `json:"logLevel"`
-	WebKeyFile    string `json:"webKeyFile"`
-	WebCertFile   string `json:"webCertFile"`
-	WebHostname   string `json:"webHostname"`
-	WebPort       int    `json:"webPort"`
-	WebPassword   string `json:"webPassword"`
-	ForwardHost   string `json:"forwardHost"`
-	RelayHostname string `json:"relayHostname"`
-	RelayPort     int    `json:"relayPort"`
-	RelayPersist  bool   `json:"relayPersist"`
-	RelayCertFile string `json:"relayCertFile"`
+	LogFile       string                       `json:"logFile"`
+	LogLevel      int                          `json:"logLevel"`
+	Server        server.WebServerConfig       `json:"server"`
+	Client        lsp_handler.ClientAuthConfig `json:"client"`
+	RelayPersist  bool                         `json:"relayPersist"`
+	CallToken     string                       `json:"callToken"`
+	StaticRTCSite string                       `json:"staticRTCSite"`
 }

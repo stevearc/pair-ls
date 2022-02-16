@@ -9,7 +9,7 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 )
 
-func (h *lspHandler) handleTextDocumentHover(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
+func (h *LspHandler) handleTextDocumentHover(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
 	if h.clientSendsCursor {
 		return
 	}

@@ -33,7 +33,13 @@ export type RPCOptions = {
   batching?: boolean;
 };
 
-export default class RPCHandler {
+export interface JsonRPC {
+  request<T>(method: string, params: any, timeout?: number): Promise<T>;
+  notify(method: string, params?: any): void;
+  registerMethod(method: string, callback: (...args: any[]) => any): void;
+}
+
+export default class RPCHandler implements JsonRPC {
   private nextID: number;
   private outgoingRequests: RPCRequest[];
   private incomingResponses: RPCResponse[];
@@ -42,6 +48,7 @@ export default class RPCHandler {
   private pendingRequests: { [id: string]: PromiseHandle<any> };
   private methods: { [method: string]: (...args: any[]) => any };
   private batching: boolean;
+  private pendingData: string;
 
   constructor(opts?: RPCOptions) {
     this.nextID = 1;
@@ -52,6 +59,7 @@ export default class RPCHandler {
     this.pendingRequests = {};
     this.methods = {};
     this.batching = opts?.batching ?? true;
+    this.pendingData = "";
   }
 
   get hasPending(): boolean {
@@ -176,6 +184,18 @@ export default class RPCHandler {
       return this.respondError(-32700, "Parse error");
     }
     this.receiveParsedRequest(request);
+  }
+
+  receiveRawData(message: ArrayBuffer) {
+    const str = this.pendingData + new TextDecoder().decode(message);
+    this.pendingData = "";
+    // TODO this is a sloppy way to do stream JSON decoding. It relies on the assumption that we will at some point receive a message that completes all previous messages and starts no new ones. For our particular application (low-ish traffic) this seems to be good enough for now.
+    try {
+      this.receiveRawMessage(str);
+    } catch {
+      this.pendingData = str;
+      console.warn("Couldn't process data", str);
+    }
   }
 
   /**

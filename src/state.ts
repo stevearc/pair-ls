@@ -1,6 +1,6 @@
 import * as React from "react";
 import { type AlertProps } from "@mui/material/Alert";
-import Client from "./client";
+import BaseClient from "./base_client";
 import {
   colorschemes,
   setColorScheme,
@@ -250,7 +250,7 @@ export function showToast(
   dispatch: Dispatcher,
   text: string | (() => string),
   props: AlertProps,
-  duration: number | null = 4
+  duration: number | null = 4000
 ): number {
   const id = createAlertID();
   dispatch({
@@ -290,8 +290,8 @@ export function getInitialState(): AppState {
 export type AppContextType = {
   state: AppState;
   dispatch: Dispatcher;
-  client: Client | null;
-  setClient: (client: Client | null) => void;
+  client: BaseClient | null;
+  setClient: (client: BaseClient | null) => void;
 };
 export const AppContext = React.createContext<AppContextType>({
   state: getInitialState(),

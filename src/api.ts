@@ -37,5 +37,9 @@ export async function post<T>(
   // @ts-ignore
   init.headers["Content-Type"] = "application/json";
   const response = await fetch(path, init);
-  return await response.json();
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw await response.text();
+  }
 }

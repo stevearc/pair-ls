@@ -1,15 +1,21 @@
-import RPCHandler, { RPCOptions } from "./jsonrpc";
+import RPCHandler, { RPCOptions, JsonRPC } from "./jsonrpc";
 import ReconnectingWebSocket from "./reconnecting_websocket";
 
-export default class WebSocketRPC {
-  ws: ReconnectingWebSocket;
-  rpc: RPCHandler;
+export default class WebSocketRPC implements JsonRPC {
+  private ws: ReconnectingWebSocket;
+  private rpc: RPCHandler;
   private tid: NodeJS.Timeout | null;
 
   constructor(url: string | URL, opts?: RPCOptions) {
     this.tid = null;
     this.rpc = new RPCHandler(opts);
     this.ws = new ReconnectingWebSocket(url);
+    this.ws.addEventListener("open", () => {
+      if (this.tid != null) {
+        clearTimeout(this.tid);
+        this.tid = null;
+      }
+    });
     this.ws.addEventListener("message", (evt: MessageEvent) => {
       evt.data.text().then((text: string) => {
         this.rpc.receiveRawMessage(text);
