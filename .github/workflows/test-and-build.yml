@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - "*"
+    tags:
+      - "v*"
   pull_request:
     branches:
       - "*"
@@ -24,16 +26,13 @@ jobs:
         if: ${{ github.event_name == 'schedule' }}
         run: test -n "$(git rev-list --after="24 hours" @)" && echo "::set-output name=build_type::nightly"
   lint-job:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     name: Lint and build Javascript
     needs: check_date
     if: ${{ github.event.schedule == null || needs.check_date.outputs.build_type == 'nightly' }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: "^1.17"
       - uses: actions/setup-node@v2
         with:
           node-version: "16"
@@ -41,15 +40,23 @@ jobs:
       - run: yarn install
       - run: yarn lint
       - run: yarn release
+      - run: yarn release-static
       - name: "Upload build artifacts"
-        if: ${{ needs.check_date.outputs.build_type == 'nightly' }}
+        if: ${{ needs.check_date.outputs.build_type == 'nightly' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags')) }}
         uses: actions/upload-artifact@v2
         with:
           name: js-bundle
           path: "server/dist/*"
-          retention-days: 1
+          retention-days: 5
+      - name: "Upload static site build artifacts"
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags') }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: static-js-bundle
+          path: "static/*"
+          retention-days: 5
   release-nightly:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     name: Nightly release
     needs: [check_date, lint-job]
     if: ${{ needs.check_date.outputs.build_type == 'nightly' }}
@@ -59,7 +66,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: "^1.17"
-      - name: Download a single artifact
+      - name: Download js-bundle
         uses: actions/download-artifact@v2
         with:
           name: js-bundle
@@ -76,3 +83,43 @@ jobs:
             pair-ls.exe
           name: nightly
           tag_name: nightly
+  release-version:
+    name: Cut release
+    needs: lint-job
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.17"
+      - name: Download js-bundle
+        uses: actions/download-artifact@v2
+        with:
+          name: js-bundle
+          path: server/dist
+      - run: mkdir -p static
+      - name: Download static-js-bundle
+        uses: actions/download-artifact@v2
+        with:
+          name: static-js-bundle
+          path: static
+      - run: GOOS=linux GOARCH=amd64 go build -o pair-ls-linux64
+      - run: GOOS=darwin GOARCH=amd64 go build -o pair-ls-mac
+      - run: GOOS=windows GOARCH=amd64 go build -o pair-ls.exe
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            pair-ls-*
+            pair-ls.exe
+      - run: aws s3 sync --debug --region us-west-1 ./static/ s3://code.stevearc.com/
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - run: aws cloudfront create-invalidation --distribution-id E1DAF3Z7T3PIYW --paths '/*'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
