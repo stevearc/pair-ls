@@ -1,8 +1,18 @@
 import * as React from "react";
-import hljs from "highlight.js";
 import styled from "@emotion/styled";
 import { AppContext, View, Range, File } from "../state";
+import { type HLJSApi } from "highlight.js";
 const { useContext, useEffect, useMemo, useRef } = React;
+
+let _hljs: HLJSApi | null = null;
+function lazyImport(): HLJSApi {
+  if (_hljs != null) {
+    return _hljs;
+  }
+  throw import("highlight.js").then((mod) => {
+    _hljs = mod.default;
+  });
+}
 
 const Container = styled.div`
   display: flex;
@@ -38,17 +48,22 @@ export default function WindowComponent({ file_id }: { file_id: number }) {
   if (lines == null) {
     throw client.getText(file.filename);
   }
-  return <Window file={file} view={state.view} follow={state.follow} />;
+  const hljs = lazyImport();
+  return (
+    <Window hljs={hljs} file={file} view={state.view} follow={state.follow} />
+  );
 }
 
 function Window_({
   file,
   follow,
   view,
+  hljs,
 }: {
   file: File;
   follow: boolean;
   view?: View | null;
+  hljs: HLJSApi;
 }) {
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const prevFile = usePrevious(file.filename);

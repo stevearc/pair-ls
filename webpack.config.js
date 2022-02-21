@@ -5,7 +5,7 @@ module.exports = (env, argv) => {
   var config = {
     entry: "./src/index.tsx",
     output: {
-      filename: "main.js",
+      filename: "[name].bundle.js",
       path: path.resolve(
         __dirname,
         env.IS_STATIC ? "static/dist" : "server/dist"
