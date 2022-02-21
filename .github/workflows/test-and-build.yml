@@ -115,11 +115,7 @@ jobs:
           files: |
             pair-ls-*
             pair-ls.exe
-      - run: aws s3 sync --debug --region us-west-1 ./static/ s3://code.stevearc.com/
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - run: aws cloudfront create-invalidation --distribution-id E1DAF3Z7T3PIYW --paths '/*'
+      - run: ./publish-static-site.sh
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

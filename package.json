@@ -11,7 +11,7 @@
     "build-static": "yarn clean-static && yarn webpack --mode development --env IS_STATIC=true --config webpack.config.js && cp -r server/index.html static/ && cp css/* static/dist/ && go build",
     "release": "yarn clean; yarn cleancss css/* -o server/dist/base.css; yarn webpack --mode production --config webpack.config.js; gzip server/dist/*",
     "release-static": "yarn clean-static && yarn webpack --mode production --env IS_STATIC=true --config webpack.config.js && cp -r server/index.html static/ && yarn cleancss css/* -o static/dist/base.css",
-    "publish-static": "yarn release-static && aws s3 sync static/ s3://code.stevearc.com/",
+    "publish-static": "yarn release-static && ./publish-static-site.sh",
     "clean": "rm -rf server/dist",
     "clean-static": "rm -rf static/*",
     "lint": "yarn tsc"
