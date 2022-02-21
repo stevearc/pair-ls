@@ -3,8 +3,9 @@ import { Dispatcher, View, File, ChangeTextRange, showToast } from "./state";
 
 export default abstract class BaseClient {
   protected dispatch: Dispatcher;
-  protected promises: { [filename: string]: Promise<string[]> };
+  protected promises: { [filename: string]: Promise<void> };
   private rpc: JsonRPC;
+  private last_file_fetch: string | null;
 
   constructor(rpc: JsonRPC, dispatch: Dispatcher) {
     this.rpc = rpc;
@@ -17,18 +18,26 @@ export default abstract class BaseClient {
     }
     this.dispatch = dispatch;
     this.promises = {};
+    this.last_file_fetch = null;
   }
 
-  getText(filename: string): Promise<string[]> {
+  getFileLoadPromise(filename: string): Promise<void> | undefined {
+    return this.promises[filename];
+  }
+
+  getText(filename: string): Promise<void> {
+    if (filename === this.last_file_fetch) {
+      return Promise.resolve();
+    }
     if (this.promises[filename] != null) {
       return this.promises[filename];
     }
     const p = this.rpc.request<File>("getText", { filename }).then(
       (file) => {
+        this.last_file_fetch = filename;
         delete this.promises[filename];
         const lines = file.lines ?? [];
         this.dispatch({ type: "setText", file_id: file.id, text: lines });
-        return lines;
       },
       (e) => {
         delete this.promises[filename];

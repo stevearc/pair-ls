@@ -21,7 +21,7 @@ const Gutter = styled.pre`
 `;
 
 export default function WindowComponent({ file_id }: { file_id: number }) {
-  const { state, client } = useContext(AppContext);
+  const { client, state } = useContext(AppContext);
   const file = state.files[file_id];
   useEffect(() => {
     if (client != null && file != null) {
