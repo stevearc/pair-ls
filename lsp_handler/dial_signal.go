@@ -139,7 +139,6 @@ func (h *LspHandler) handleIce(ctx context.Context, conn *jsonrpc2.Conn, req *js
 	if peerConn == nil {
 		return nil, errors.New(fmt.Sprintf("No peer found with ID %s", params.ClientID))
 	}
-	h.logger.Println("Adding ice candidate", params.Candidate)
 	peerConn.AddICECandidate(params.Candidate)
 	return nil, nil
 }
@@ -167,6 +166,5 @@ func (h *LspHandler) handleGetFile(ctx context.Context, conn *jsonrpc2.Conn, req
 		return nil, err
 	}
 
-	f := h.state.GetFile(params.Filename)
-	return f.Lines, nil
+	return h.state.GetFile(params.Filename), nil
 }
