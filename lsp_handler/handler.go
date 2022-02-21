@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"os"
 	"pair-ls/state"
+	"pair-ls/util"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -185,6 +187,18 @@ func (h *LspHandler) showMessage(message string, mType lsp.MessageType) {
 
 func (h *LspHandler) createStaticUrl(offer string) string {
 	return h.config.StaticRTCSite + "?t=" + url.QueryEscape(offer)
+}
+
+func (h *LspHandler) filenameFromURI(uri lsp.DocumentURI) (string, error) {
+	filename, err := util.FromURI(uri)
+	if err != nil {
+		return "", err
+	}
+	rel, err := filepath.Rel(h.rootPath, filename)
+	if err != nil {
+		return "", err
+	}
+	return rel, nil
 }
 
 type pendingNotif struct {

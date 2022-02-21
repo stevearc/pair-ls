@@ -3,7 +3,6 @@ package lsp_handler
 import (
 	"context"
 	"encoding/json"
-	"pair-ls/util"
 
 	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
@@ -18,9 +17,9 @@ func (h *LspHandler) handleTextDocumentDidChange(ctx context.Context, conn *json
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
-	filename, err := util.FromURI(params.TextDocument.URI)
+	filename, err := h.filenameFromURI(params.TextDocument.URI)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 
 	for _, change := range params.ContentChanges {

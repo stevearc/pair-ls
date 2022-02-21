@@ -3,7 +3,6 @@ package lsp_handler
 import (
 	"context"
 	"encoding/json"
-	"pair-ls/util"
 
 	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
@@ -19,9 +18,9 @@ func (h *LspHandler) handleTextDocumentDidClose(ctx context.Context, conn *jsonr
 		return nil, err
 	}
 
-	filename, err := util.FromURI(params.TextDocument.URI)
+	filename, err := h.filenameFromURI(params.TextDocument.URI)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 	h.state.CloseFile(filename)
 	return nil, nil
