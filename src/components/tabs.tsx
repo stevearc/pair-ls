@@ -3,7 +3,7 @@ import { styled } from "@mui/system";
 import TabsUnstyled from "@mui/base/TabsUnstyled";
 import TabsListUnstyled from "@mui/base/TabsListUnstyled";
 import Box from "@mui/material/Box";
-import { AppContext, Dispatcher } from "../state";
+import { AppContext, Dispatcher, File } from "../state";
 import TabUnstyled, { tabUnstyledClasses } from "@mui/base/TabUnstyled";
 const { useContext, useEffect, useMemo, useRef } = React;
 
@@ -54,36 +54,42 @@ const Tabs = styled(TabsUnstyled)`
 
 export default function PublicTabPanel(_: {}) {
   const { state, dispatch } = useContext(AppContext);
-  const filenames = useMemo(() => Object.keys(state.files), [state.files]);
+  const files = useMemo(() => {
+    const ret = [];
+    for (const key in state.files) {
+      ret.push(state.files[key]);
+    }
+    return ret;
+  }, [state.files]);
   return (
     <TabPanel
       dispatch={dispatch}
-      filename={state.filename}
-      filenames={filenames}
-      viewFile={state.view?.filename}
+      file_id={state.file_id}
+      files={files}
+      viewFile={state.view?.file_id}
     />
   );
 }
 
 function TabPanel_({
   dispatch,
-  filenames,
-  filename,
+  files,
+  file_id,
   viewFile,
 }: {
   dispatch: Dispatcher;
-  filenames: string[];
-  filename?: string;
-  viewFile?: string;
+  files: File[];
+  file_id?: number;
+  viewFile?: number;
 }) {
   const selectedEl = useRef<null | HTMLButtonElement>(null);
-  const shortnames = useShortFilenames(filenames);
+  const shortnames = useShortFilenames(files);
   useEffect(() => {
     if (selectedEl.current != null) {
       selectedEl.current.scrollIntoView();
     }
-  }, [filename]);
-  if (filenames.length === 0) {
+  }, [file_id]);
+  if (files.length === 0) {
     return null;
   }
   return (
@@ -94,26 +100,29 @@ function TabPanel_({
       }}
     >
       <Tabs
-        value={filename}
+        value={file_id}
         onChange={(_event, value) => {
-          dispatch({ type: "selectFile", filename: value.toString() });
+          dispatch({
+            type: "selectFile",
+            file_id: typeof value === "string" ? Number.parseInt(value) : value,
+          });
         }}
       >
         <TabsList>
-          {filenames.map((fname) => {
+          {files.map((file) => {
             const sx =
-              fname === viewFile
+              file.id === viewFile
                 ? {
                     color: "var(--tab_cursor_present) !important",
                   }
                 : {};
-            return fname === filename ? (
-              <Tab key={fname} value={fname} ref={selectedEl} sx={sx}>
-                {shortnames[fname]}
+            return file.id === file_id ? (
+              <Tab key={file.id} value={file.id} ref={selectedEl} sx={sx}>
+                {shortnames[file.filename]}
               </Tab>
             ) : (
-              <Tab key={fname} value={fname} sx={sx}>
-                {shortnames[fname]}
+              <Tab key={file.id} value={file.id} sx={sx}>
+                {shortnames[file.filename]}
               </Tab>
             );
           })}
@@ -125,7 +134,7 @@ function TabPanel_({
 
 const TabPanel = React.memo(TabPanel_);
 
-function useShortFilenames(filenames: string[]): { [short: string]: string } {
+function useShortFilenames(files: File[]): { [short: string]: string } {
   return useMemo(() => {
     const shortToLong: { [key: string]: string } = {};
     function insert(short: string, long: string) {
@@ -141,7 +150,8 @@ function useShortFilenames(filenames: string[]): { [short: string]: string } {
         shortToLong[short] = long;
       }
     }
-    for (const filename of filenames) {
+    for (const file of files) {
+      const { filename } = file;
       const last_idx = filename.lastIndexOf("/");
       const basename = filename.slice(last_idx + 1);
       insert(basename, filename);
@@ -151,7 +161,7 @@ function useShortFilenames(filenames: string[]): { [short: string]: string } {
       longToShort[shortToLong[shortName]] = shortName;
     }
     return longToShort;
-  }, [filenames]);
+  }, [files]);
 }
 
 function disambiguate(f1: string, f2: string): [string, string | null] {

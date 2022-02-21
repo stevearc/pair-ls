@@ -167,6 +167,6 @@ func (h *LspHandler) handleGetFile(ctx context.Context, conn *jsonrpc2.Conn, req
 		return nil, err
 	}
 
-	text := h.state.GetText(params.Filename)
-	return text, nil
+	f := h.state.GetFile(params.Filename)
+	return f.Lines, nil
 }

@@ -20,23 +20,23 @@ const Gutter = styled.pre`
   color: var(--fg_gutter);
 `;
 
-export default function WindowComponent({ filename }: { filename: string }) {
+export default function WindowComponent({ file_id }: { file_id: number }) {
   const { state, client } = useContext(AppContext);
+  const file = state.files[file_id];
   useEffect(() => {
-    if (client != null) {
-      client.getText(filename);
+    if (client != null && file != null) {
+      client.getText(file.filename);
     }
-  }, [filename, client]);
+  }, [file_id, client]);
   if (client == null) {
     return null;
   }
-  const file = state.files[filename];
   if (file == null) {
     return null;
   }
   const lines = file.lines;
   if (lines == null) {
-    throw client.getText(filename);
+    throw client.getText(file.filename);
   }
   return <Window file={file} view={state.view} follow={state.follow} />;
 }
@@ -72,7 +72,7 @@ function Window_({
         <code>{file.lines!.map((_, i) => `${i + 1}`).join("\n")}</code>
       </Gutter>
       <pre className="hljs">
-        {view != null && view?.filename === file.filename && (
+        {view != null && view?.file_id === file.id && (
           <React.Fragment>
             <Cursor ref={cursorRef} lines={file.lines!} view={view}></Cursor>
             {view.range != null && (

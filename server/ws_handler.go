@@ -19,8 +19,8 @@ type websocketHandler struct {
 }
 
 type InitializeClient struct {
-	View  *state.View           `json:"view"`
-	Files map[string]state.File `json:"files"`
+	View  *state.View  `json:"view"`
+	Files []state.File `json:"files"`
 }
 
 type GetFileRequest struct {
@@ -32,8 +32,7 @@ func (h *websocketHandler) handleGetFile(ctx context.Context, conn *jsonrpc2.Con
 	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return nil, err
 	}
-	text := h.state.GetText(params.Filename)
-	return text, nil
+	return h.state.GetFile(params.Filename), nil
 }
 
 func (h *websocketHandler) handleAuth(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {

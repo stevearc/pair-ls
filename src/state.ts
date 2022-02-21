@@ -19,7 +19,7 @@ export type Range = {
 };
 
 export type View = {
-  filename: string;
+  file_id: number;
   line: number;
   character: number;
   range?: Range;
@@ -33,16 +33,17 @@ export type ChangeTextRange = {
 
 export type File = {
   filename: string;
+  id: number;
   language: string;
   lines?: string[];
 };
 
 export type FileMap = {
-  [filename: string]: File;
+  [file_id: number]: File;
 };
 
 export type SyncResponse = {
-  files: FileMap;
+  files: File[];
   view?: View | null;
 };
 
@@ -53,7 +54,7 @@ export type AlertWrapper = {
 };
 
 export type AppState = {
-  filename?: string;
+  file_id?: number;
   colorscheme: ColorScheme;
   view?: View | null;
   follow: boolean;
@@ -70,15 +71,16 @@ export type AppAction =
   | {
       type: "openFile";
       filename: string;
+      id: number;
       language: string;
     }
   | {
       type: "closeFile";
-      filename: string;
+      file_id: number;
     }
   | {
       type: "setText";
-      filename: string;
+      file_id: number;
       text: string[];
     }
   | {
@@ -87,7 +89,7 @@ export type AppAction =
     }
   | {
       type: "updateText";
-      filename: string;
+      file_id: number;
       changes: ChangeTextRange[];
     }
   // User actions
@@ -96,7 +98,7 @@ export type AppAction =
     }
   | {
       type: "selectFile";
-      filename: string;
+      file_id: number;
     }
   | {
       type: "setColorScheme";
@@ -118,32 +120,37 @@ export type Dispatcher = React.Dispatch<AppAction>;
 
 export function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case "initialize":
+    case "initialize": {
+      const files: FileMap = {};
+      for (const file of action.sync.files) {
+        files[file.id] = file;
+      }
       return {
         ...state,
-        files: action.sync.files,
-        filename:
-          action.sync.view?.filename ?? Object.keys(action.sync.files)[0],
+        files,
+        file_id: action.sync.view?.file_id ?? action.sync.files[0]?.id,
         view: action.sync.view,
       };
+    }
     case "openFile":
       return {
         ...state,
-        filename: state.filename ?? action.filename,
+        file_id: state.file_id ?? action.id,
         files: {
           ...state.files,
-          [action.filename]: {
+          [action.id]: {
             filename: action.filename,
+            id: action.id,
             language: action.language,
           },
         },
       };
     case "closeFile":
-      if (state.files[action.filename] == null) {
+      if (state.files[action.file_id] == null) {
         return state;
       }
       const newFiles = { ...state.files };
-      delete newFiles[action.filename];
+      delete newFiles[action.file_id];
       return {
         ...state,
         files: newFiles,
@@ -153,14 +160,14 @@ export function reducer(state: AppState, action: AppAction): AppState {
         ...state,
         files: {
           ...state.files,
-          [action.filename]: {
-            ...state.files[action.filename],
+          [action.file_id]: {
+            ...state.files[action.file_id],
             lines: action.text,
           },
         },
       };
     case "updateText": {
-      const newLines = [...(state.files[action.filename].lines ?? [])];
+      const newLines = [...(state.files[action.file_id].lines ?? [])];
       for (const change of action.changes) {
         newLines.splice(
           change.start_line,
@@ -172,8 +179,8 @@ export function reducer(state: AppState, action: AppAction): AppState {
         ...state,
         files: {
           ...state.files,
-          [action.filename]: {
-            ...state.files[action.filename],
+          [action.file_id]: {
+            ...state.files[action.file_id],
             lines: newLines,
           },
         },
@@ -183,7 +190,7 @@ export function reducer(state: AppState, action: AppAction): AppState {
       if (state.follow) {
         return {
           ...state,
-          filename: action.view.filename,
+          file_id: action.view.file_id,
           view: action.view,
         };
       } else {
@@ -196,14 +203,14 @@ export function reducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         follow: false,
-        filename: action.filename,
+        file_id: action.file_id,
       };
     case "toggleFollow":
       const newFollow = !state.follow;
       if (newFollow) {
         return {
           ...state,
-          filename: state.view?.filename ?? state.filename,
+          file_id: state.view?.file_id ?? state.file_id,
           follow: newFollow,
         };
       } else {
@@ -279,7 +286,7 @@ export function getInitialState(): AppState {
   setColorScheme(colorscheme);
   return {
     colorscheme,
-    filename: undefined,
+    file_id: undefined,
     files: {},
     follow: true,
     view: undefined,

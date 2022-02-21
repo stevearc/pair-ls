@@ -1,5 +1,5 @@
 import { JsonRPC } from "./jsonrpc";
-import { Dispatcher, View, FileMap, ChangeTextRange, showToast } from "./state";
+import { Dispatcher, View, File, ChangeTextRange, showToast } from "./state";
 
 export default abstract class BaseClient {
   protected dispatch: Dispatcher;
@@ -23,11 +23,12 @@ export default abstract class BaseClient {
     if (this.promises[filename] != null) {
       return this.promises[filename];
     }
-    const p = this.rpc.request<string[]>("getText", { filename }).then(
-      (text) => {
+    const p = this.rpc.request<File>("getText", { filename }).then(
+      (file) => {
         delete this.promises[filename];
-        this.dispatch({ type: "setText", filename, text });
-        return text;
+        const lines = file.lines ?? [];
+        this.dispatch({ type: "setText", file_id: file.id, text: lines });
+        return lines;
       },
       (e) => {
         delete this.promises[filename];
@@ -42,7 +43,7 @@ export default abstract class BaseClient {
   }
 
   // @ts-ignore
-  private onInitialize({ view, files }: { view: View; files: FileMap }) {
+  private onInitialize({ view, files }: { view: View; files: File[] }) {
     this.dispatch({
       type: "initialize",
       sync: {
@@ -55,52 +56,55 @@ export default abstract class BaseClient {
   // @ts-ignore
   private onOpenFile({
     filename,
+    id,
     language,
   }: {
     filename: string;
+    id: number;
     language: string;
   }) {
     this.dispatch({
       type: "openFile",
       filename,
+      id,
       language,
     });
   }
 
   // @ts-ignore
-  private onCloseFile({ filename }: { filename: string }) {
+  private onCloseFile({ file_id }: { file_id: number }) {
     this.dispatch({
       type: "closeFile",
-      filename,
+      file_id,
     });
   }
 
   // @ts-ignore
   private onTextReplaced({
-    filename,
+    file_id,
     text,
   }: {
-    filename: string;
+    file_id: number;
     text: string[];
   }) {
     this.dispatch({
       type: "setText",
-      filename,
+      file_id,
       text,
     });
   }
 
   // @ts-ignore
   private onUpdateText({
-    filename,
+    file_id,
     changes,
   }: {
-    filename: string;
+    file_id: number;
     changes: ChangeTextRange[];
   }) {
     this.dispatch({
       type: "updateText",
-      filename,
+      file_id,
       changes,
     });
   }

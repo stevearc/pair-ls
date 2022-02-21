@@ -67,6 +67,9 @@ func (cmd *lspCommand) Run(args []string) {
 		if hostname == "" {
 			hostname = "localhost"
 		}
+		if cmd.config.Server.CertFile != "" {
+			hostname = "wss://" + hostname
+		}
 		handler.SendShareString(util.CreateShareURL(fmt.Sprintf("%s:%d", hostname, cmd.port), ""))
 	}
 	handler.ListenOnStdin(lspLogger, cmd.config.LogLevel, cmd.config.CallToken)

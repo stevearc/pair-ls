@@ -15,16 +15,18 @@ type WorkspaceState struct {
 	mu     sync.Mutex
 	events EventBus.Bus
 	logger *log.Logger
+	nextID int32
 }
 
 type File struct {
 	Filename string   `json:"filename"`
+	ID       int32    `json:"id"`
 	Lines    []string `json:"lines,omitempty"`
 	Language string   `json:"language"`
 }
 
 type View struct {
-	Filename  string     `json:"filename"`
+	FileID    int32      `json:"file_id"`
 	Line      int        `json:"line"`
 	Character int        `json:"character"`
 	Range     *lsp.Range `json:"range"`
@@ -32,16 +34,17 @@ type View struct {
 
 type OpenFileEvent struct {
 	Filename string `json:"filename"`
+	ID       int32  `json:"id"`
 	Language string `json:"language"`
 }
 
 type CloseFileEvent struct {
-	Filename string `json:"filename"`
+	FileID int32 `json:"file_id"`
 }
 
 type ReplaceTextEvent struct {
-	Filename string   `json:"filename"`
-	Text     []string `json:"text"`
+	FileID int32    `json:"file_id"`
+	Text   []string `json:"text"`
 }
 
 type ChangeTextRange struct {
@@ -51,8 +54,8 @@ type ChangeTextRange struct {
 }
 
 type UpdateTextEvent struct {
-	Filename string            `json:"filename"`
-	Changes  []ChangeTextRange `json:"changes"`
+	FileID  int32             `json:"file_id"`
+	Changes []ChangeTextRange `json:"changes"`
 }
 
 type ChangeViewEvent struct {
@@ -94,15 +97,15 @@ func (s *WorkspaceState) CursorMove(filename string, position lsp.Position, rng 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	anyChanges := false
-	if s.view.Filename != filename {
-		s.view.Filename = filename
+	file := s.files[filename]
+	if s.view.FileID != file.ID {
+		s.view.FileID = file.ID
 		anyChanges = true
 	}
 	if s.view.Line != position.Line {
 		s.view.Line = position.Line
 		anyChanges = true
 	}
-	file := s.files[filename]
 	if s.view.Character != position.Character {
 		s.view.Character = CharIndexToRune(file.Lines[position.Line], position.Character)
 		anyChanges = true
@@ -139,17 +142,19 @@ func (s *WorkspaceState) OpenFile(filename string, text string, language string,
 	defer s.mu.Unlock()
 	s.files[filename] = &File{
 		Filename: filename,
+		ID:       s.nextID,
 		Lines:    SplitLines(text),
 		Language: language,
 	}
 	s.publish(OpenFileEvent{
 		Filename: filename,
+		ID:       s.nextID,
 		Language: language,
 	})
 
 	if updateCursor || s.view == nil {
 		s.view = &View{
-			Filename:  filename,
+			FileID:    s.nextID,
 			Line:      0,
 			Character: 0,
 		}
@@ -157,14 +162,16 @@ func (s *WorkspaceState) OpenFile(filename string, text string, language string,
 			View: *s.view,
 		})
 	}
+	s.nextID++
 }
 
 func (s *WorkspaceState) CloseFile(filename string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	file := s.files[filename]
 	delete(s.files, filename)
 	s.publish(CloseFileEvent{
-		Filename: filename,
+		FileID: file.ID,
 	})
 }
 
@@ -175,8 +182,8 @@ func (s *WorkspaceState) ReplaceTextRanges(filename string, changes []lsp.TextDo
 	var changeText []ChangeTextRange
 	file.Lines, changeText = applyTextChanges(file.Lines, changes)
 	s.publish(UpdateTextEvent{
-		Filename: filename,
-		Changes:  changeText,
+		FileID:  file.ID,
+		Changes: changeText,
 	})
 }
 
@@ -187,12 +194,13 @@ func (s *WorkspaceState) ReplaceText(filename string, text string, updateCursor 
 	prev := s.files[filename]
 	s.files[filename] = &File{
 		Filename: prev.Filename,
+		ID:       prev.ID,
 		Language: prev.Language,
 		Lines:    newLines,
 	}
 	s.publish(ReplaceTextEvent{
-		Filename: filename,
-		Text:     newLines,
+		FileID: prev.ID,
+		Text:   newLines,
 	})
 
 	if updateCursor {
@@ -213,7 +221,7 @@ func (s *WorkspaceState) ReplaceText(filename string, text string, updateCursor 
 			lnum = len(newLines)
 		}
 		s.view = &View{
-			Filename:  filename,
+			FileID:    prev.ID,
 			Line:      lnum,
 			Character: col,
 		}
@@ -223,24 +231,34 @@ func (s *WorkspaceState) ReplaceText(filename string, text string, updateCursor 
 	}
 }
 
-func (s *WorkspaceState) GetFiles() map[string]File {
+func (s *WorkspaceState) GetFiles() []File {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	ret := make(map[string]File)
-	for key, value := range s.files {
-		ret[key] = File{
+	ret := make([]File, 0, len(s.files))
+	for _, value := range s.files {
+		ret = append(ret, File{
 			Filename: value.Filename,
+			ID:       value.ID,
 			Language: value.Language,
-		}
+		})
 	}
 	return ret
 }
 
-func (s *WorkspaceState) GetText(filename string) []string {
+func (s *WorkspaceState) GetFile(filename string) File {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.files[filename].Lines
+	f := s.files[filename]
+	lines := make([]string, len(f.Lines))
+	copy(lines, f.Lines)
+	file := File{
+		ID:       f.ID,
+		Filename: f.Filename,
+		Language: f.Language,
+		Lines:    lines,
+	}
+	return file
 }
 
 func (s *WorkspaceState) GetView() *View {

@@ -2,7 +2,8 @@
 
 Pair-ls is a lightweight, editor-agnostic tool for remote pair-programming. It
 allows you to easily share the files you are working on in a read-only manner.
-Pair-ls is _not_ a collaborative editor. If you're wondering why you would use pair-ls, read the [comparison](#comparison) section.
+Pair-ls is _not_ a collaborative editor. If you're wondering why you would use
+pair-ls, read the [comparison](#comparison) section.
 
 :warning: pair-ls is currently in **Alpha** status. Expect breaking API changes.
 Backwards compatibility will be respected _after_ the first release.
@@ -26,14 +27,14 @@ yarn](https://classic.yarnpkg.com/lang/en/docs/install/) and [go build tools](ht
 
 ## Setup
 
-| Feature            | No plugin | Neovim |
-| ------------------ | --------- | ------ |
-| Read-only web view | ✓         | ✓      |
-| Cursor tracking    | ~         | ✓      |
-
-~ means limited functionality
+If the option is available, it is recommended to use a plugin for your editor.
+If your editor is not yet supported, you can still use pair-ls with minimal
+configuration (also file an issue to ask for support). Using pair-ls without an
+editor plugin will mean some degradation in the cursor tracking.
 
 **Editor plugins:**
+
+See the link for installation instructions
 
 - Neovim: [pair-ls.nvim](https://github.com/stevearc/pair-ls.nvim)
 
@@ -42,8 +43,9 @@ yarn](https://classic.yarnpkg.com/lang/en/docs/install/) and [go build tools](ht
 pair-ls supports any editor with a [LSP
 client](https://microsoft.github.io/language-server-protocol/).
 
-Configure your LSP client to run this command as a server: `pair-ls lsp -port 8080`. Now you can visit http://localhost:8080 to see a mirror of your code. For
-more info on how to share this page, see [Sharing](#sharing).
+Configure your LSP client to run this command as a server: `pair-ls lsp -port 8080`.
+Now you can visit http://localhost:8080 to see a mirror of your code. For more
+info on how to share this page, see [Sharing](#sharing).
 
 ## Sharing
 
@@ -55,14 +57,17 @@ connections](docs/WEBRTC.md).
 
 If you have access to a server with a public IP address that is reachable by
 both parties, you have options that will be a bit more convenient and more
-reliable. The most straightforward is [ssh port forwarding](docs/PORT_FORWARDING.md), but you can also set up [a relay server](docs/RELAY.md).
+reliable. The most straightforward is [ssh port
+forwarding](docs/PORT_FORWARDING.md), but you can also set up [a relay
+server](docs/RELAY.md).
 
-For completeness, you can also set up a [signal server](docs/SIGNAL.md), but that has all the drawbacks of both the WebRTC approach and the relay server approach.
+For completeness, you can also set up a [signal server](docs/SIGNAL.md), but
+that has all the drawbacks of both WebRTC relay server, so it's not recommended.
 
 ### Password protection
 
-If you opt to use port forwarding or a relay server, you should make sure to
-enable password protection to prevent anyone on the internet from seeing your
+If your pair-ls webpage is visible on the public internet, you should make sure
+to enable password protection to prevent anyone on the internet from seeing your
 code. Simply provide a password, either via the [config file](#configuration) or
 with the environment variable `PAIR_WEB_PASS`. The webserver will now require
 this password before allowing access. You should also make sure your site it
@@ -120,10 +125,9 @@ password = "secur3"
 ## Comparison
 
 Pairing tools fall into roughly 3 categories: **screen sharing**, **web
-editors** that require you to use their in-browser editor, and **editor
-plugins**.
+editors**, and **editor plugins**.
 
-**Screen sharing**:
+**Screen sharing**: Easiest to use, with the worst functionality
 
 - **Pros**:
   - Very easy, they're built into the tools you're already using to call your partners
@@ -131,10 +135,10 @@ plugins**.
 - **Cons**:
   - Video artifacts can make text hard to read
   - Text is often too small unless the sharer increases the size dramatically
-  - You can only see exactly what the editor sees
+  - Viewer has no control over what they're looking at
   - Read-only sharing
 
-**Web editor**:
+**Web editor**: Easy to share, but only if you buy into their ecosystem
 
 - **Pros**:
   - No installation required
@@ -143,7 +147,7 @@ plugins**.
   - You have to use their editor
   - You have to use their entire editing ecosystem, since it's not simply working with files on your own computer
 
-**Editor plugin**:
+**Editor plugin**: Best experience as long as everyone's preferred editor is supported
 
 - **Pros**:
   - You can use your own editor
@@ -154,7 +158,7 @@ plugins**.
   - Everyone has to be using the same editor
   - Only shares editor state, nothing in other windows
 
-**Pair-ls**:
+**Pair-ls**: Sacrifices features of editor plugins for broader support
 
 - **Pros**:
   - You can use your own editor

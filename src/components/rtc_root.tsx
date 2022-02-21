@@ -28,7 +28,7 @@ export default function Root(_: {}) {
       <Header />
       <ConnectionFlow client={client as RTCClient}>
         <React.Suspense fallback={<LinearProgress />}>
-          {state.filename != null && <Window filename={state.filename} />}
+          {state.file_id != null && <Window file_id={state.file_id} />}
         </React.Suspense>
       </ConnectionFlow>
       <Snackbar />

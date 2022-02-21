@@ -27,7 +27,7 @@ export default function Root(_: {}) {
     <React.Fragment>
       <Header />
       <React.Suspense fallback={<LinearProgress />}>
-        {state.filename != null && <Window filename={state.filename} />}
+        {state.file_id != null && <Window file_id={state.file_id} />}
       </React.Suspense>
       {client == null && <Login onLogin={handleLogin} />}
       <Snackbar />
