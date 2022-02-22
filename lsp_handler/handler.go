@@ -2,6 +2,7 @@ package lsp_handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"pair-ls/state"
 	"pair-ls/util"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -197,6 +199,9 @@ func (h *LspHandler) filenameFromURI(uri lsp.DocumentURI) (string, error) {
 	rel, err := filepath.Rel(h.rootPath, filename)
 	if err != nil {
 		return "", err
+	}
+	if strings.HasPrefix(rel, "..") {
+		return "", errors.New(fmt.Sprintf("File %s is outside root", rel))
 	}
 	return rel, nil
 }
