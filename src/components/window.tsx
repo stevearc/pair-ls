@@ -2,6 +2,7 @@ import * as React from "react";
 import styled from "@emotion/styled";
 import { AppContext, View, Range, File } from "../state";
 import { type HLJSApi } from "highlight.js";
+import usePrevious from "../util/usePrevious";
 const { useContext, useEffect, useMemo, useRef } = React;
 
 let _hljs: HLJSApi | null = null;
@@ -230,15 +231,6 @@ function calcTabOffset(
     }
   }
   return numTabs;
-}
-function usePrevious<T>(value: T, update: boolean = true): T | null {
-  const ref = useRef<T | null>(null);
-  useEffect(() => {
-    if (update) {
-      ref.current = value;
-    }
-  }, [value]);
-  return ref.current;
 }
 
 const LSP_TO_HLJS_LANG: { [language: string]: string } = {
