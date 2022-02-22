@@ -22,6 +22,8 @@ and that should start the connection.
 This process can be performed multiple times to share with multiple people. It
 creates a new P2P connection each time.
 
+https://user-images.githubusercontent.com/506791/155238280-d9731c17-ef9a-4592-91dd-704600e0006f.mp4
+
 Note that this method is only available via the editor plugins. There is no way
 to initiate a WebRTC call using only the bare-bones LSP server. You can,
 however, use the pattern below.

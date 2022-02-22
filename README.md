@@ -5,9 +5,6 @@ allows you to easily share the files you are working on in a read-only manner.
 Pair-ls is _not_ a collaborative editor. If you're wondering why you would use
 pair-ls, read the [comparison](#comparison) section.
 
-:warning: pair-ls is currently in **Alpha** status. Expect breaking API changes.
-Backwards compatibility will be respected _after_ the first release.
-
 - [Installation](#installation)
 - [Setup](#setup)
 - [Sharing](#sharing)
@@ -15,6 +12,8 @@ Backwards compatibility will be respected _after_ the first release.
 - [Comparison](#comparison)
 - [Alternatives](#alternatives)
 - [Technical Overview](#technical-overview)
+
+https://user-images.githubusercontent.com/506791/155237457-8478eb05-8bcc-4a0f-ba76-0a07a206edda.mp4
 
 ## Installation
 
@@ -62,7 +61,8 @@ forwarding](docs/PORT_FORWARDING.md), but you can also set up [a relay
 server](docs/RELAY.md).
 
 For completeness, you can also set up a [signal server](docs/SIGNAL.md), but
-that has all the drawbacks of both WebRTC relay server, so it's not recommended.
+that has all the drawbacks of both WebRTC and relay server, so it's not
+recommended.
 
 ### Password protection
 
