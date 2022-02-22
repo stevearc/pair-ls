@@ -109,13 +109,13 @@ jobs:
       - run: GOOS=linux GOARCH=amd64 go build -o pair-ls-linux64
       - run: GOOS=darwin GOARCH=amd64 go build -o pair-ls-mac
       - run: GOOS=windows GOARCH=amd64 go build -o pair-ls.exe
+      - run: ./publish-static-site.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             pair-ls-*
             pair-ls.exe
-      - run: ./publish-static-site.sh
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
