@@ -2,6 +2,7 @@ import * as React from "react";
 import { styled } from "@mui/system";
 import TabsUnstyled from "@mui/base/TabsUnstyled";
 import TabsListUnstyled from "@mui/base/TabsListUnstyled";
+import Tooltip from "@mui/material/Tooltip";
 import Box from "@mui/material/Box";
 import { AppContext, Dispatcher, File } from "../state";
 import TabUnstyled, { tabUnstyledClasses } from "@mui/base/TabUnstyled";
@@ -116,14 +117,23 @@ function TabPanel_({
                     color: "var(--tab_cursor_present) !important",
                   }
                 : {};
-            return file.id === file_id ? (
-              <Tab key={file.id} value={file.id} ref={selectedEl} sx={sx}>
-                {shortnames[file.filename]}
-              </Tab>
-            ) : (
-              <Tab key={file.id} value={file.id} sx={sx}>
-                {shortnames[file.filename]}
-              </Tab>
+            return (
+              <Tooltip
+                key={file.id}
+                title={
+                  file.filename === shortnames[file.filename]
+                    ? ""
+                    : file.filename
+                }
+              >
+                <Tab
+                  value={file.id}
+                  ref={file.id === file_id ? selectedEl : null}
+                  sx={sx}
+                >
+                  {shortnames[file.filename]}
+                </Tab>
+              </Tooltip>
             );
           })}
         </TabsList>
@@ -186,5 +196,12 @@ function disambiguate(f1: string, f2: string): [string, string | null] {
       }
     }
   }
-  return [f1.slice(i1 + 1), f2.slice(i2 + 1)];
+  // Trim the leading / off if it's not truly the first / in the path
+  if (i1 > 0 && f1[i1] === "/") {
+    i1++;
+  }
+  if (i2 > 0 && f2[i2] === "/") {
+    i2++;
+  }
+  return [f1.slice(i1), f2.slice(i2)];
 }
