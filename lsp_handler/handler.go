@@ -196,14 +196,16 @@ func (h *LspHandler) filenameFromURI(uri lsp.DocumentURI) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rel, err := filepath.Rel(h.rootPath, filename)
-	if err != nil {
-		return "", err
+	if h.rootPath != "" {
+		filename, err := filepath.Rel(h.rootPath, filename)
+		if err != nil {
+			return "", err
+		}
+		if strings.HasPrefix(filename, "..") {
+			return "", errors.New(fmt.Sprintf("File %s is outside root", filename))
+		}
 	}
-	if strings.HasPrefix(rel, "..") {
-		return "", errors.New(fmt.Sprintf("File %s is outside root", rel))
-	}
-	return rel, nil
+	return filename, nil
 }
 
 type pendingNotif struct {

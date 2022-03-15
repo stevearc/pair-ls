@@ -21,11 +21,13 @@ func (h *LspHandler) handleInitialize(ctx context.Context, conn *jsonrpc2.Conn, 
 		return nil, err
 	}
 
-	rootPath, err := util.FromURI(params.RootURI)
-	if err != nil {
-		return nil, err
+	if params.RootURI != "" {
+		rootPath, err := util.FromURI(params.RootURI)
+		if err != nil {
+			return nil, err
+		}
+		h.rootPath = filepath.Clean(rootPath)
 	}
-	h.rootPath = filepath.Clean(rootPath)
 
 	exp := reflect.ValueOf(params.Capabilities.Experimental)
 	if exp.IsValid() && exp.Kind() == reflect.Map {
