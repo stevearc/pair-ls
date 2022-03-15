@@ -175,16 +175,37 @@ func (s *WorkspaceState) CloseFile(filename string) {
 	})
 }
 
-func (s *WorkspaceState) ReplaceTextRanges(filename string, changes []lsp.TextDocumentContentChangeEvent) {
+func (s *WorkspaceState) ReplaceTextRanges(filename string, changes []lsp.TextDocumentContentChangeEvent, updateCursor bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	file := s.files[filename]
 	var changeText []ChangeTextRange
-	file.Lines, changeText = applyTextChanges(file.Lines, changes)
+	newLines, changeText := applyTextChanges(file.Lines, changes)
 	s.publish(UpdateTextEvent{
 		FileID:  file.ID,
 		Changes: changeText,
 	})
+
+	if updateCursor {
+		lastChange := changeText[len(changeText)-1]
+		col := 0
+		changeLine := lastChange.Text[len(lastChange.Text)-1]
+		if lastChange.EndLine < len(file.Lines) {
+			col = longestCommonPrefix(file.Lines[lastChange.EndLine], changeLine)
+		} else {
+			col = len(changeLine)
+		}
+		s.view = &View{
+			FileID:    file.ID,
+			Line:      lastChange.EndLine + len(lastChange.Text) - 1,
+			Character: col,
+		}
+		s.publish(ChangeViewEvent{
+			View: *s.view,
+		})
+	}
+
+	file.Lines = newLines
 }
 
 func (s *WorkspaceState) ReplaceText(filename string, text string, updateCursor bool) {

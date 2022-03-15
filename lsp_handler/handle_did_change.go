@@ -31,7 +31,7 @@ func (h *LspHandler) handleTextDocumentDidChange(ctx context.Context, conn *json
 			return nil, nil
 		}
 	}
-	h.state.ReplaceTextRanges(filename, params.ContentChanges)
+	h.state.ReplaceTextRanges(filename, params.ContentChanges, !h.clientSendsCursor)
 
 	return nil, nil
 }
