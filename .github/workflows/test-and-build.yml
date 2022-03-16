@@ -74,6 +74,13 @@ jobs:
       - run: GOOS=linux GOARCH=amd64 go build -o pair-ls-linux64
       - run: GOOS=darwin GOARCH=amd64 go build -o pair-ls-mac
       - run: GOOS=windows GOARCH=amd64 go build -o pair-ls.exe
+      - uses: dev-drprasad/delete-tag-and-release@v0.2.0
+        continue-on-error: true
+        with:
+          delete_release: true
+          tag_name: nightly
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
