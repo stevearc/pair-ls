@@ -18,11 +18,19 @@ export type Range = {
   };
 };
 
-export type View = {
-  file_id: number;
+type Position = {
   line: number;
   character: number;
+};
+
+export type CursorPosition = {
+  position: Position;
   range?: Range;
+};
+
+export type View = {
+  file_id: number;
+  cursors: CursorPosition[];
 };
 
 export type ChangeTextRange = {

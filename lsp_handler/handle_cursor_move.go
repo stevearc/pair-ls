@@ -3,6 +3,7 @@ package lsp_handler
 import (
 	"context"
 	"encoding/json"
+	"pair-ls/state"
 
 	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
@@ -10,8 +11,7 @@ import (
 
 type CursorMoveRequest struct {
 	TextDocument lsp.TextDocumentIdentifier `json:"textDocument"`
-	Position     lsp.Position               `json:"position"`
-	Range        *lsp.Range                 `json:"range"`
+	Cursors      []state.CursorPosition     `json:"cursors"`
 }
 
 func (h *LspHandler) handleCursorMove(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (result interface{}, err error) {
@@ -27,6 +27,6 @@ func (h *LspHandler) handleCursorMove(ctx context.Context, conn *jsonrpc2.Conn, 
 	if err != nil {
 		return nil, nil
 	}
-	h.state.CursorMove(filename, params.Position, params.Range)
+	h.state.CursorMove(filename, params.Cursors)
 	return nil, nil
 }

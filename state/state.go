@@ -2,7 +2,6 @@ package state
 
 import (
 	"log"
-	"reflect"
 	"sync"
 
 	"github.com/asaskevich/EventBus"
@@ -26,10 +25,13 @@ type File struct {
 }
 
 type View struct {
-	FileID    int32      `json:"file_id"`
-	Line      int        `json:"line"`
-	Character int        `json:"character"`
-	Range     *lsp.Range `json:"range"`
+	FileID  int32            `json:"file_id"`
+	Cursors []CursorPosition `json:"cursors"`
+}
+
+type CursorPosition struct {
+	Position lsp.Position `json:"position"`
+	Range    *lsp.Range   `json:"range"`
 }
 
 type OpenFileEvent struct {
@@ -93,48 +95,37 @@ func (s *WorkspaceState) Clear() {
 	s.view = nil
 }
 
-func (s *WorkspaceState) CursorMove(filename string, position lsp.Position, rng *lsp.Range) {
+func (s *WorkspaceState) CursorMove(filename string, cursors []CursorPosition) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	anyChanges := false
 	file := s.files[filename]
-	if s.view.FileID != file.ID {
-		s.view.FileID = file.ID
-		anyChanges = true
-	}
-	if s.view.Line != position.Line {
-		s.view.Line = position.Line
-		anyChanges = true
-	}
-	if s.view.Character != position.Character {
-		s.view.Character = CharIndexToRune(file.Lines[position.Line], position.Character)
-		anyChanges = true
-	}
-	if rng != nil {
-		if !reflect.DeepEqual(s.view.Range, rng) {
-			anyChanges = true
-			startLine := file.Lines[rng.Start.Line]
-			endLine := file.Lines[rng.End.Line]
-			s.view.Range = &lsp.Range{
+	s.view.FileID = file.ID
+	newCursors := make([]CursorPosition, 0, len(cursors))
+	for _, cursor := range cursors {
+		newPos := CursorPosition{
+			Position: lsp.Position{
+				Line:      cursor.Position.Line,
+				Character: CharIndexToRune(file.Lines[cursor.Position.Line], cursor.Position.Character),
+			},
+		}
+		if cursor.Range != nil {
+			newPos.Range = &lsp.Range{
 				Start: lsp.Position{
-					Line:      rng.Start.Line,
-					Character: CharIndexToRune(startLine, rng.Start.Character),
+					Line:      cursor.Range.Start.Line,
+					Character: CharIndexToRune(file.Lines[cursor.Range.Start.Line], cursor.Range.Start.Character),
 				},
 				End: lsp.Position{
-					Line:      rng.End.Line,
-					Character: CharIndexToRune(endLine, rng.End.Character),
+					Line:      cursor.Range.End.Line,
+					Character: CharIndexToRune(file.Lines[cursor.Range.End.Line], cursor.Range.End.Character),
 				},
 			}
 		}
-	} else if s.view.Range != nil {
-		s.view.Range = nil
-		anyChanges = true
+		newCursors = append(newCursors, newPos)
 	}
-	if anyChanges {
-		s.publish(ChangeViewEvent{
-			View: *s.view,
-		})
-	}
+	s.view.Cursors = newCursors
+	s.publish(ChangeViewEvent{
+		View: *s.view,
+	})
 }
 
 func (s *WorkspaceState) OpenFile(filename string, text string, language string, updateCursor bool) {
@@ -154,9 +145,13 @@ func (s *WorkspaceState) OpenFile(filename string, text string, language string,
 
 	if updateCursor || s.view == nil {
 		s.view = &View{
-			FileID:    s.nextID,
-			Line:      0,
-			Character: 0,
+			FileID: s.nextID,
+			Cursors: []CursorPosition{{
+				Position: lsp.Position{
+					Line:      0,
+					Character: 0,
+				},
+			}},
 		}
 		s.publish(ChangeViewEvent{
 			View: *s.view,
@@ -196,9 +191,13 @@ func (s *WorkspaceState) ReplaceTextRanges(filename string, changes []lsp.TextDo
 			col = len(changeLine)
 		}
 		s.view = &View{
-			FileID:    file.ID,
-			Line:      lastChange.EndLine + len(lastChange.Text) - 1,
-			Character: col,
+			FileID: file.ID,
+			Cursors: []CursorPosition{{
+				Position: lsp.Position{
+					Line:      lastChange.EndLine + len(lastChange.Text) - 1,
+					Character: col,
+				},
+			}},
 		}
 		s.publish(ChangeViewEvent{
 			View: *s.view,
@@ -242,9 +241,13 @@ func (s *WorkspaceState) ReplaceText(filename string, text string, updateCursor 
 			lnum = len(newLines)
 		}
 		s.view = &View{
-			FileID:    prev.ID,
-			Line:      lnum,
-			Character: col,
+			FileID: prev.ID,
+			Cursors: []CursorPosition{{
+				Position: lsp.Position{
+					Line:      lnum,
+					Character: col,
+				},
+			}},
 		}
 		s.publish(ChangeViewEvent{
 			View: *s.view,

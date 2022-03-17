@@ -3,6 +3,7 @@ package lsp_handler
 import (
 	"context"
 	"encoding/json"
+	"pair-ls/state"
 
 	"github.com/sourcegraph/go-lsp"
 	"github.com/sourcegraph/jsonrpc2"
@@ -26,6 +27,9 @@ func (h *LspHandler) handleTextDocumentHover(ctx context.Context, conn *jsonrpc2
 	if err != nil {
 		return nil, nil
 	}
-	h.state.CursorMove(filename, params.Position, nil)
+	cursors := []state.CursorPosition{{
+		Position: params.Position,
+	}}
+	h.state.CursorMove(filename, cursors)
 	return nil, nil
 }

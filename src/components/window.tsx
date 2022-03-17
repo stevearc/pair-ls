@@ -1,6 +1,6 @@
 import * as React from "react";
 import styled from "@emotion/styled";
-import { AppContext, View, Range, File } from "../state";
+import { AppContext, View, Range, File, CursorPosition } from "../state";
 import { type HLJSApi } from "highlight.js";
 import usePrevious from "../util/usePrevious";
 const { useContext, useEffect, useMemo, useRef } = React;
@@ -88,14 +88,20 @@ function Window_({
         <code>{file.lines!.map((_, i) => `${i + 1}`).join("\n")}</code>
       </Gutter>
       <pre className="hljs">
-        {view != null && view?.file_id === file.id && (
-          <React.Fragment>
-            <Cursor ref={cursorRef} lines={file.lines!} view={view}></Cursor>
-            {view.range != null && (
-              <Selection lines={file.lines!} range={view.range}></Selection>
-            )}
-          </React.Fragment>
-        )}
+        {view != null &&
+          view?.file_id === file.id &&
+          view.cursors.map((cursor, i) => (
+            <React.Fragment key={i}>
+              <Cursor
+                ref={i === 0 ? cursorRef : null}
+                lines={file.lines!}
+                cursor={cursor}
+              ></Cursor>
+              {cursor.range != null && (
+                <Selection lines={file.lines!} range={cursor.range}></Selection>
+              )}
+            </React.Fragment>
+          ))}
         <Code language={code.language} markup={code.value} />
       </pre>
     </Container>
@@ -122,21 +128,21 @@ const Code = React.memo(Code_);
 
 const Cursor = React.forwardRef<
   HTMLDivElement,
-  { view: View; lines: string[] }
->(({ view, lines }, ref) => {
-  if (view.line >= lines.length) {
+  { cursor: CursorPosition; lines: string[] }
+>(({ cursor, lines }, ref) => {
+  const { line, character } = cursor.position;
+  if (line >= lines.length) {
     return null;
   }
-  const tabOffset = calcTabOffset(lines, view.line, view.character);
+  const tabOffset = calcTabOffset(lines, line, character);
   const CursorDiv = styled.div`
     position: absolute;
-    top: ${0.5 + 1.2 * 0.8 * (view?.line ?? 0)}rem;
-    left: calc(0.5rem + ${tabOffset + (view?.character ?? 0)}ch);
+    top: ${0.5 + 1.0 * line}rem;
+    left: calc(0.5rem + ${tabOffset + character}ch);
     font-family: monospace;
     font-size: 0.8rem;
     display: inline-block;
     height: 1rem;
-    line-height: 1.2;
     mix-blend-mode: difference;
     width: 1ch;
     background: var(--cursor);
@@ -172,13 +178,12 @@ function SelectionDiv({
   }
   const SDiv = styled.div`
     position: absolute;
-    top: ${0.5 + 1.2 * 0.8 * line}rem;
+    top: ${0.5 + 1.0 * line}rem;
     left: calc(0.5rem + ${start}ch);
     font-family: monospace;
     font-size: 0.8rem;
     display: inline-block;
     height: 1rem;
-    line-height: 1.2;
     mix-blend-mode: difference;
     width: ${width};
     background: var(--selection);
