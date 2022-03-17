@@ -54,10 +54,10 @@ share this across the internet?
 The quickest way with no setup required is to use [WebRTC
 connections](docs/WEBRTC.md).
 
-If you have access to a server with a public IP address that is reachable by
-both parties, you have options that will be a bit more convenient and more
-reliable. The most straightforward is [ssh port
-forwarding](docs/PORT_FORWARDING.md), but you can also set up [a relay
+You can use [ngrok](https://ngrok.com/) or a server you control to [forward your
+web port](docs/PORT_FORWARDING.md).
+
+If you'd prefer the server act as a full intermediary, you can set up [a relay
 server](docs/RELAY.md).
 
 For completeness, you can also set up a [signal server](docs/SIGNAL.md), but
@@ -189,6 +189,7 @@ Most of these are paid apps/services, though many of those have a free tier.
   - [Microsoft Live
     Share](https://visualstudio.microsoft.com/services/live-share/)
     (VSCode, Visual Studio)
+  - [Floobits](https://floobits.com/) (IntelliJ, Sublime, Atom, Neovim, Emacs) (paid)
   - [Duckly](https://duckly.com/) (VSCode, IntelliJ) (paid)
   - [CodeTogether](https://www.codetogether.com/) (VSCode, IntelliJ, Eclipse)
     (paid)

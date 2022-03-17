@@ -1,7 +1,24 @@
 # Port Forwarding
 
 Perhaps the simplest way to share your local webpage via your remote server is
-to forward your local ports. First, make sure that your server has `GatewayPorts yes` in the `sshd_config` file (and restart the service if you had to change
+to forward your local ports.
+
+## Using ngrok
+
+[ngrok](https://ngrok.com/) is a service that allows you to forward ports to
+a public server. It is a paid service, but they have a free tier. The rough
+steps to follow are:
+
+- [Install ngrok](https://ngrok.com/download)
+- [Create an account](https://dashboard.ngrok.com/signup)
+- Verify your email address (you should receive an email)
+- [Connect your account](https://dashboard.ngrok.com/get-started/setup) by running `ngrok authtoken <token>`
+- `ngrok http 8080` (or whatever the local port is)
+- Go to http://localhost:4040/ to inspect the tunnels and get the public link
+
+## Using SSH
+
+First, make sure that your server has `GatewayPorts yes` in the `sshd_config` file (and restart the service if you had to change
 it).
 
 Then from your local machine, run:
