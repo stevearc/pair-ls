@@ -36,6 +36,7 @@ editor plugin will mean some degradation in the cursor tracking.
 See the link for installation instructions
 
 - Neovim: [pair-ls.nvim](https://github.com/stevearc/pair-ls.nvim)
+- VS Code: [pair-ls-vscode](https://github.com/stevearc/pair-ls-vscode)
 
 ### Generic Setup - any editor
 
