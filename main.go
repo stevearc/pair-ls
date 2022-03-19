@@ -15,9 +15,9 @@ import (
 )
 
 func main() {
-	config_home := os.Getenv("XDG_CONFIG_HOME")
-	if config_home == "" {
-		config_home = filepath.Join(os.Getenv("HOME"), ".config")
+	config_home, err := os.UserConfigDir()
+	if err != nil {
+		log.Panicln("Could not get config directory", err)
 	}
 
 	confFile := filepath.Join(config_home, "pair-ls.toml")
@@ -52,12 +52,16 @@ func addServerFlags(config *PairConfig, fs *flag.FlagSet) {
 }
 
 func readConfig(filename string) (*PairConfig, error) {
-	cache_home := os.Getenv("XDG_CACHE_HOME")
-	if cache_home == "" {
-		cache_home = filepath.Join(os.Getenv("HOME"), ".cache")
+	cache_home, err := os.UserCacheDir()
+	if err != nil {
+		return nil, err
+	}
+	cache_dir := filepath.Join(cache_home, "pair_ls")
+	if err = os.MkdirAll(cache_dir, 0750); err != nil {
+		return nil, err
 	}
 	config := PairConfig{
-		LogFile:       filepath.Join(cache_home, "pair-ls.log"),
+		LogFile:       filepath.Join(cache_dir, "pair-ls.log"),
 		LogLevel:      1,
 		StaticRTCSite: "https://code.stevearc.com/",
 	}
