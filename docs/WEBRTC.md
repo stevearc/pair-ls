@@ -10,6 +10,17 @@ The pair-ls static site relies on free
 powered by [Metered Video](https://www.metered.ca/tools/openrelay/) and backup
 STUN servers by [Google](https://google.com). Thanks!
 
+## Building the static Web site
+
+To build the static Web site, run the following commands:
+
+```sh
+yarn
+yarn release-static
+```
+
+Then upload the `static/` directory to your Web server.
+
 ## Editor initiates
 
 Your editor plugin will provide some command (consult the docs) to initiate a
